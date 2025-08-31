@@ -58,8 +58,11 @@ pub fn read_file(
         ));
     }
 
-    match fs::read_to_string(path_obj) {
-        Ok(content) => Ok(Value::Handle(put_string(vm, content))),
+    match fs::read(path_obj) {
+        Ok(content) => Ok(Value::Handle(put_string(
+            vm,
+            String::from_utf8_lossy(&content).to_string(),
+        ))),
         Err(_) => Err(error::throw(
             VMErrorType::Fs(FsError::ReadError(format!("{}", path))),
             vm,
