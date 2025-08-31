@@ -25,7 +25,7 @@ impl Action {
     }
 
     pub fn to_string(&self) -> String {
-        format!("Action({}, {})", self.module, self.member)
+        format!("Action({}.{})", self.module, self.member)
     }
 
     pub fn property_access(&self, property: &str) -> Option<Value> {
