@@ -97,5 +97,5 @@ pub fn bootstrap_default_lib() -> Vec<(String, MemObject)> {
 }
 
 pub fn gen_native_modules_defs() -> Vec<NativeModuleDef> {
-    return vec![fs::generate_mod_def()];
+    return vec![fs::generate_mod_def(), ai::generate_mod_def()];
 }

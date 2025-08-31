@@ -6,7 +6,10 @@ pub mod types;
 use crate::{
     memory::MemObject,
     opcodes::DataType,
-    std::ai::members::{do_fn, infer},
+    std::{
+        ai::members::{do_fn, infer, infer_def},
+        NativeModuleDef,
+    },
     types::object::{
         func::{Engine, Function},
         structs::StructDeclaration,
@@ -35,4 +38,13 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     fields.push(("Engine".to_string(), engine_ref));
 
     ("ai".to_string(), fields)
+}
+
+pub fn generate_mod_def() -> NativeModuleDef {
+    let members = vec![infer_def()];
+
+    NativeModuleDef {
+        module: "ai".to_string(),
+        members,
+    }
 }

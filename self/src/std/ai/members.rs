@@ -22,7 +22,7 @@ use crate::{
         },
         gen_native_modules_defs, generate_native_module, get_native_module_type,
         utils::cast_json_value,
-        vector,
+        vector, NativeMember,
     },
     types::{
         object::{
@@ -78,6 +78,18 @@ struct AIAction {
     module: String,
     member: String,
     params: Vec<serde_json::Value>,
+}
+
+// infer
+pub fn infer_def() -> NativeMember {
+    NativeMember {
+        name: "infer".to_string(),
+        description: "infer an output value with AI based on an input prompt".to_string(),
+        params: Some(vec![
+            "prompt(string)".to_string(),
+            "context(string)".to_string(),
+        ]),
+    }
 }
 
 pub fn infer(
