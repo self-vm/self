@@ -4,11 +4,7 @@ use crate::std::{NativeModuleDef, NativeMember};
 use crate::vm::Vm;
 use crate::core::error::{self, VMError, VMErrorType};
 use crate::memory::{Handle, MemObject};
-use crate::std::heap_utils::put_string;
-use crate::std::{NativeMember, NativeModuleDef};
-use crate::types::object::func::{Engine, Function};
 use crate::types::Value;
-use crate::vm::Vm;
 
 fn get_cwd(
     vm: &mut Vm,
@@ -20,7 +16,7 @@ fn get_cwd(
         Ok(path) => {
             if let Some(path) = path.to_str() {
                 if debug { println!("OS.GET_CWD -> {}", path); }
-                Ok(Value::HeapRef(vm.heap.allocate(HeapObject::String(path.to_string()))))
+                Ok(Value::HeapRef(vm.heap.allocate(MemObject::String(path.to_string()))))
             } else {
                 Err(error::throw(
                     VMErrorType::Os(OsError::__placeholder("non utf8 path".to_string())),

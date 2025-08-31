@@ -6,6 +6,7 @@ pub mod fs;
 pub mod heap_utils;
 pub mod net;
 pub mod os;
+pub mod path;
 pub mod selfmod;
 mod utils;
 pub mod vector;
@@ -17,6 +18,7 @@ pub enum NativeModule {
     Os,
     Net,
     Env,
+    Path,
 }
 
 pub struct NativeMember {
@@ -72,6 +74,7 @@ pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
         "os" => Some(NativeModule::Os),
         "net" => Some(NativeModule::Net),
         "env" => Some(NativeModule::Env),
+        "path" => Some(NativeModule::Path),
         _ => None,
     }
 }
@@ -86,6 +89,7 @@ pub fn generate_native_module(
         NativeModule::Os => os::generate_struct(),
         NativeModule::Net => net::generate_struct(),
         NativeModule::Env => env::generate_struct(),
+        NativeModule::Path => path::generate_struct(),
     }
 }
 
