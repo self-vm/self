@@ -6,7 +6,7 @@ use crate::core::error::fs_errors::FsError;
 use crate::core::error::type_errors::TypeError;
 use crate::core::error::{self, VMErrorType};
 use crate::memory::Handle;
-use crate::std::heap_utils::put_string;
+use crate::std::heap_utils::{put_string, put_vector};
 use crate::std::NativeMember;
 use crate::types::raw::bool::Bool;
 use crate::{
@@ -63,6 +63,68 @@ pub fn read_file(
             vm,
             String::from_utf8_lossy(&content).to_string(),
         ))),
+        Err(_) => Err(error::throw(
+            VMErrorType::Fs(FsError::ReadError(format!("{}", path))),
+            vm,
+        )),
+    }
+}
+
+// read_dir
+pub fn read_dir_def() -> NativeMember {
+    NativeMember {
+        name: "read_dir".to_string(),
+        description:
+            "read a directory on the host filesystem on the given path and get all the entries."
+                .to_string(),
+        params: Some(vec!["path(string)".to_string()]),
+    }
+}
+
+pub fn read_dir_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "read_dir".to_string(),
+        vec!["path".to_string()], // TODO: load params to native functions
+        Engine::Native(read_dir),
+    ))
+}
+
+pub fn read_dir(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> Result<Value, VMError> {
+    let path = params[0].as_string_obj(vm)?;
+    let path_obj = Path::new(&path);
+    if !path_obj.exists() {
+        return Err(error::throw(
+            VMErrorType::Fs(FsError::FileNotFound(format!("{}", path))),
+            vm,
+        ));
+    }
+    if !path_obj.is_dir() {
+        return Err(error::throw(
+            VMErrorType::Fs(FsError::NotADir(format!("{}", path))),
+            vm,
+        ));
+    }
+
+    match fs::read_dir(path_obj) {
+        Ok(entries) => {
+            let mut dir_entries = Vec::new();
+            for entry in entries {
+                match entry {
+                    Ok(dir_entry) => {
+                        if let Some(name) = dir_entry.file_name().to_str() {
+                            dir_entries.push(Value::Handle(put_string(vm, name.to_string())));
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+            Ok(Value::Handle(put_vector(vm, dir_entries)))
+        }
         Err(_) => Err(error::throw(
             VMErrorType::Fs(FsError::ReadError(format!("{}", path))),
             vm,

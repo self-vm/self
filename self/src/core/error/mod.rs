@@ -96,6 +96,7 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
         VMErrorType::Fs(fs) => match fs {
             FsError::FileNotFound(s) => ("File not found".to_string(), format!("{}", s)),
             FsError::NotAFile(s) => ("Not a file".to_string(), format!("{}", s)),
+            FsError::NotADir(s) => ("Not a directory".to_string(), format!("{}", s)),
             FsError::ReadError(s) => ("Read error".to_string(), format!("{}", s)),
             FsError::WriteError(s) => ("Write error".to_string(), format!("{}", s)),
             FsError::DeleteError(s) => ("Delete error".to_string(), format!("{}", s)),
