@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{types::Value, vm::Vm};
+use crate::{std::vector::init_vector_members, types::Value, vm::Vm};
 
 #[derive(Debug, Clone)]
 pub struct Vector {
@@ -14,6 +14,16 @@ impl Vector {
             elements,
             members: HashMap::new(),
         }
+    }
+
+    pub fn new_initialized(elements: Vec<Value>, vm: &Vm) -> Vector {
+        let mut vector = Vector {
+            elements,
+            members: HashMap::new(),
+        };
+
+        init_vector_members(&mut vector, vm);
+        vector
     }
 
     pub fn init_vector_members(&mut self, members: HashMap<String, Value>) {

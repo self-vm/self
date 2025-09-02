@@ -9,5 +9,6 @@ pub fn put_string(vm: &mut Vm, string: String) -> Handle {
 }
 
 pub fn put_vector(vm: &mut Vm, vector: Vec<Value>) -> Handle {
-    vm.memory.alloc(MemObject::Vector(Vector::new(vector)))
+    vm.memory
+        .alloc(MemObject::Vector(Vector::new_initialized(vector, vm)))
 }
