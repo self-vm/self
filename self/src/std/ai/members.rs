@@ -238,8 +238,7 @@ pub fn do_fn(
 
     // store all actions ref in a vector and return the
     // vector allocated heap ref
-    let mut vector = Vector::new(actions_ref);
-    vector::init_vector_members(&mut vector, vm);
+    let vector = Vector::new_initialized(actions_ref, vm);
     let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
     return Ok(Value::Handle(vector_handle));
 }
