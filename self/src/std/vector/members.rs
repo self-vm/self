@@ -96,3 +96,56 @@ fn map(
 
     Ok(Value::RawValue(RawValue::Nothing))
 }
+
+// map
+pub fn map_reduce_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "map_reduce".to_string(),
+        vec!["callback".to_string()],
+        Engine::Native(map_reduce),
+    ))
+}
+
+fn map_reduce(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> Result<Value, VMError> {
+    // resolve 'self'
+    let _self = if let Some(_this) = _self {
+        if let MemObject::Vector(vec) = vm.memory.resolve(&_this) {
+            vec.clone()
+        } else {
+            unreachable!()
+        }
+    } else {
+        unreachable!()
+    };
+
+    let callback = params[0].as_function_obj(vm)?;
+    if callback.parameters.len() < 1 {
+        return Err(error::throw(
+            VMErrorType::TypeError(TypeError::InvalidArgsCount {
+                expected: 1,
+                received: 0,
+            }),
+            vm,
+        ));
+    }
+
+    let mut accumulator = Value::RawValue(RawValue::Nothing);
+    for ele in &_self.elements {
+        let exec_result = vm.run_function(&callback, None, vec![accumulator, ele.clone()], debug);
+        if let Some(err) = exec_result.error {
+            return Err(err);
+        }
+
+        accumulator = match exec_result.result {
+            Some(v) => v,
+            None => Value::RawValue(RawValue::Nothing),
+        };
+    }
+
+    Ok(Value::RawValue(RawValue::Nothing))
+}
