@@ -18,7 +18,7 @@ fn join(
         let value = value.as_string_obj(vm)?;
         acc.push(value);
     }
-    Ok(Value::HeapRef(vm.heap.allocate(MemObject::String(
+    Ok(Value::Handle(vm.memory.alloc(MemObject::String(
         acc.to_str().unwrap().to_string(),
     ))))
 }
