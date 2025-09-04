@@ -79,8 +79,8 @@ pub fn get(
     let var = env::var(key);
     match var {
         Ok(v) => {
-            let value_ref = vm.heap.allocate(MemObject::String(v));
-            Ok(Value::HeapRef(value_ref))
+            let handle = vm.memory.alloc(MemObject::String(v));
+            Ok(Value::Handle(handle))
         }
         Err(_) => Ok(Value::RawValue(RawValue::Nothing)),
     }
