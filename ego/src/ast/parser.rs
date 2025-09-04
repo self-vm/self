@@ -35,6 +35,64 @@ pub struct Module {
     current: Cell<usize>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Position {
+    Default,
+    Condition,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Origin {
+    Default,
+    IfCond,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ExprCtx {
+    pub position: Position,
+    pub origin: Origin,
+
+    // pub allow_postfix: bool,
+    // pub allow_assignment: bool,     // =, +=...
+    pub allow_struct_literal: bool, // T { ... }
+}
+
+impl ExprCtx {
+    pub fn new(position: Position, origin: Origin) -> Self {
+        // defaults
+        let mut ctx = Self {
+            position,
+            origin,
+            allow_struct_literal: true,
+        };
+
+        // adjust by position
+        match position {
+            Position::Condition => {
+                ctx.allow_struct_literal = false;
+            }
+            _ => {}
+        }
+
+        // adjust by origin
+        match origin {
+            Origin::IfCond => {
+                // none
+            }
+            _ => {}
+        }
+
+        ctx
+    }
+
+    pub fn default() -> Self {
+        Self::new(Position::Default, Origin::Default)
+    }
+    pub fn if_cond() -> Self {
+        Self::new(Position::Condition, Origin::IfCond)
+    }
+}
+
 impl Module {
     pub fn new(module_name: String, tokens: Vec<LexerToken>) -> Module {
         Module {
@@ -50,6 +108,8 @@ impl Module {
     }
 
     fn tree(&mut self, mut module_ast: ModuleAst) -> ModuleAst {
+        let ctx = ExprCtx::default();
+
         while self.is_peekable() {
             let token = self.unsafe_peek();
 
@@ -67,7 +127,7 @@ impl Module {
                     module_ast.add_child(function_node);
                 }
                 LexerTokenType::Identifier => {
-                    let identifier_node = self.identifier();
+                    let identifier_node = self.identifier(ctx);
                     module_ast.add_child(identifier_node);
                 }
                 LexerTokenType::OpenCurlyBrace => {
@@ -149,6 +209,8 @@ impl Module {
         self.current.get()
     }
 
+    // STATEMENTS
+
     // {}
     fn block(&self) -> AstNodeType {
         let mut block_node = Block::new();
@@ -190,7 +252,7 @@ impl Module {
                     block_node.add_child(function_node);
                 }
                 LexerTokenType::Identifier => {
-                    let identifier_node = self.identifier();
+                    let identifier_node = self.identifier(ExprCtx::default());
                     block_node.add_child(identifier_node);
                 }
                 LexerTokenType::OpenCurlyBrace => {
@@ -292,7 +354,7 @@ impl Module {
                     break;
                 }
                 _ => {
-                    let node = self.parse_comparison();
+                    let node = self.parse_comparison(ExprCtx::default());
                     match node {
                         Expression::Identifier(_) => last_token = Some(LexerTokenType::Identifier),
                         Expression::Bool(_) => last_token = Some(LexerTokenType::TrueKeyword),
@@ -339,109 +401,6 @@ impl Module {
         // consume ')'
         self.next();
         group_node
-    }
-
-    // [a, b, x]
-    fn vector(&self, context: Option<&str>) -> Expression {
-        // where am i
-        let context_msg = match context {
-            Some(str) => format!(" in {}", str),
-            _ => "".to_string(),
-        };
-
-        let group_token = self.unsafe_peek();
-        let mut vector_node = Vector::new(group_token.at, group_token.line);
-
-        // check '['
-        if group_token.token_type == LexerTokenType::OpenSquareBracket {
-            self.next()
-        } else {
-            error::throw(
-                ErrorType::SyntaxError,
-                format!("Unexpected token '{}'{}", group_token.value, context_msg).as_str(),
-                Some(group_token.line),
-            )
-        }
-
-        // get arguments & check ']'
-        let mut last_token = None;
-        let mut closed = false;
-
-        while self.is_peekable() {
-            let token = self.unsafe_peek();
-
-            match token.token_type {
-                LexerTokenType::Comma => {
-                    if last_token == Some(LexerTokenType::Comma) {
-                        error::throw(
-                            ErrorType::MissingMemberError,
-                            format!("<empty> not valid as a vector member").as_str(),
-                            Some(group_token.line),
-                        )
-                    }
-
-                    last_token = Some(LexerTokenType::Comma);
-                    self.next();
-                }
-                LexerTokenType::CloseSquareBracket => {
-                    if last_token == Some(LexerTokenType::Comma) {
-                        error::throw(
-                            ErrorType::MissingMemberError,
-                            format!("<empty> not valid as a vector member").as_str(),
-                            Some(group_token.line),
-                        )
-                    }
-
-                    closed = true;
-                    break;
-                }
-                _ => {
-                    let node = self.parse_comparison();
-                    match node {
-                        Expression::Identifier(_) => last_token = Some(LexerTokenType::Identifier),
-                        Expression::Bool(_) => last_token = Some(LexerTokenType::TrueKeyword),
-                        Expression::Number(_) => last_token = Some(LexerTokenType::Number),
-                        Expression::Nothing(_) => last_token = Some(LexerTokenType::NothingKeyword),
-                        Expression::StringLiteral(_) => {
-                            last_token = Some(LexerTokenType::StringLiteral)
-                        }
-                        Expression::CallExpression(_) => {
-                            last_token = Some(LexerTokenType::Identifier)
-                        }
-                        Expression::BinaryExpression(_) => {
-                            last_token = Some(LexerTokenType::Number)
-                        }
-                        Expression::StructLiteral(_) => {
-                            last_token = Some(LexerTokenType::Identifier)
-                        }
-                        Expression::Vector(_) => {
-                            last_token = Some(LexerTokenType::OpenSquareBracket)
-                        }
-                        Expression::ObjectLiteral(_) => {
-                            // use identifier as a fallback
-                            last_token = Some(LexerTokenType::Identifier)
-                        }
-                        Expression::MemberExpression(_) => {
-                            last_token = Some(LexerTokenType::Identifier)
-                        }
-                    }
-                    vector_node.add_child(node);
-                }
-            }
-        }
-
-        // non closed CallExpression
-        if !closed {
-            error::throw(
-                ErrorType::SyntaxError,
-                format!("Expected ']' {}", context_msg).as_str(),
-                Some(vector_node.line),
-            )
-        };
-
-        // consume ']'
-        self.next();
-        Expression::Vector(vector_node)
     }
 
     // let a = 20
@@ -498,7 +457,7 @@ impl Module {
         };
 
         self.next();
-        let expr = self.parse_comparison();
+        let expr = self.parse_comparison(ExprCtx::default());
         // static type checking
         if let Some(annotation) = type_annotation {
             match &expr {
@@ -755,7 +714,7 @@ impl Module {
 
         // consume expression
         self.next();
-        let expr = self.expression();
+        let expr = self.expression(ExprCtx::if_cond());
         let expr_node = match expr {
             AstNodeType::Expression(b) => b,
             _ => {
@@ -828,7 +787,7 @@ impl Module {
 
         // consume expression
         self.next();
-        let expr = self.expression();
+        let expr = self.expression(ExprCtx::default());
         let expr_node = match expr {
             AstNodeType::Expression(b) => b,
             _ => {
@@ -919,7 +878,7 @@ impl Module {
 
         // consume expression
         self.next();
-        let expression_node = self.parse_comparison();
+        let expression_node = self.parse_comparison(ExprCtx::default());
 
         // check for final semicolon
         if self.is_peekable() {
@@ -941,7 +900,7 @@ impl Module {
 
         // consume expression
         self.next();
-        let expression_node = self.parse_comparison();
+        let expression_node = self.parse_comparison(ExprCtx::default());
 
         // check for final semicolon
         if self.is_peekable() {
@@ -954,8 +913,46 @@ impl Module {
         AstNodeType::ReturnStatement(ReturnStatement::new(expression_node, at, line))
     }
 
+    // : bool | : string | : number | : nothing
+    fn type_annotation(&self) -> Option<Type> {
+        if self.peek(":").token_type == LexerTokenType::Colon {
+            // consume ':'
+            self.next();
+            if self.is_peekable() {
+                let possible_type = self.unsafe_peek();
+                self.next(); // consume 'annotated type'
+                match possible_type.token_type {
+                    LexerTokenType::NumberKeyword => Some(Type::Number),
+                    LexerTokenType::StringKeyword => Some(Type::String),
+                    LexerTokenType::BoolKeyword => Some(Type::Bool),
+                    LexerTokenType::NothingKeyword => Some(Type::Nothing),
+                    _ => {
+                        error::throw(
+                            ErrorType::InvalidTypeAnnotation,
+                            format!("Expected type after ':' but got '{}'", possible_type.value)
+                                .as_str(),
+                            None,
+                        );
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                error::throw(
+                    ErrorType::ParsingError,
+                    format!("Expected type after ':' but got and early end of module").as_str(),
+                    None,
+                );
+                std::process::exit(1);
+            }
+        } else {
+            None
+        }
+    }
+
+    // EXPRESSIONS
+
     // a | a() | a.value | a = 20 + a
-    fn identifier(&self) -> AstNodeType {
+    fn identifier(&self, ctx: ExprCtx) -> AstNodeType {
         if let Some(next) = self.peek_next() {
             if LexerTokenType::AssignmentOperator == next.token_type {
                 let node = self.assignment_statement();
@@ -963,19 +960,19 @@ impl Module {
             }
         }
 
-        let node = self.parse_postfix_expression();
+        let node = self.parse_postfix_expression(ctx);
         AstNodeType::Expression(node)
     }
 
     // (2 * 2) + 3
-    fn expression(&self) -> AstNodeType {
-        let expr = self.parse_comparison();
+    fn expression(&self, ctx: ExprCtx) -> AstNodeType {
+        let expr = self.parse_comparison(ctx);
         AstNodeType::Expression(expr)
     }
 
     // 2 > 3
-    fn parse_comparison(&self) -> Expression {
-        let mut node = self.parse_expression();
+    fn parse_comparison(&self, ctx: ExprCtx) -> Expression {
+        let mut node = self.parse_expression(ctx);
 
         while self.is_peekable() {
             let token = self.unsafe_peek();
@@ -992,7 +989,7 @@ impl Module {
                     self.next();
 
                     // get right node
-                    let right = self.parse_expression();
+                    let right = self.parse_expression(ctx);
                     node = Expression::BinaryExpression(BinaryExpression::new(
                         token.value.clone(),
                         Box::new(node),
@@ -1009,8 +1006,8 @@ impl Module {
     }
 
     // 2 + 3 * 23
-    fn parse_expression(&self) -> Expression {
-        let mut node = self.parse_term();
+    fn parse_expression(&self, ctx: ExprCtx) -> Expression {
+        let mut node = self.parse_term(ctx);
         while self.is_peekable() {
             let token = self.unsafe_peek();
             match token.token_type {
@@ -1019,7 +1016,7 @@ impl Module {
                     self.next();
 
                     // get right node
-                    let right = self.parse_term();
+                    let right = self.parse_term(ctx);
                     node = Expression::BinaryExpression(BinaryExpression::new(
                         token.value.clone(),
                         Box::new(node),
@@ -1036,8 +1033,8 @@ impl Module {
     }
 
     // 2 * 4
-    fn parse_term(&self) -> Expression {
-        let mut node = self.parse_factor();
+    fn parse_term(&self, ctx: ExprCtx) -> Expression {
+        let mut node = self.parse_factor(ctx);
 
         while self.is_peekable() {
             let token = self.unsafe_peek();
@@ -1047,7 +1044,7 @@ impl Module {
                     self.next();
 
                     // get right node
-                    let right = self.parse_factor();
+                    let right = self.parse_factor(ctx);
                     node = Expression::BinaryExpression(BinaryExpression::new(
                         token.value.clone(),
                         Box::new(node),
@@ -1064,12 +1061,12 @@ impl Module {
     }
 
     // 2 | x | "Hi"
-    fn parse_factor(&self) -> Expression {
+    fn parse_factor(&self, ctx: ExprCtx) -> Expression {
         let token = self.unsafe_peek();
         let expr = match token.token_type {
             LexerTokenType::OpenParenthesis => {
                 self.next(); // to consume the '('
-                let expr = self.parse_expression();
+                let expr = self.parse_expression(ctx);
 
                 let scoped_token = self.peek(")");
                 if scoped_token.token_type == LexerTokenType::CloseParenthesis {
@@ -1084,7 +1081,7 @@ impl Module {
                     std::process::exit(1);
                 }
             }
-            LexerTokenType::OpenSquareBracket => self.vector(Some("assignament statement")),
+            LexerTokenType::OpenSquareBracket => self.vector(Some("assignament statement"), ctx),
             LexerTokenType::Number => {
                 let number_node = Number::from_string(token.value.clone(), token.at, token.line);
 
@@ -1136,9 +1133,9 @@ impl Module {
                     if next.token_type == LexerTokenType::OpenParenthesis
                         || next.token_type == LexerTokenType::Dot
                     {
-                        self.parse_postfix_expression()
+                        self.parse_postfix_expression(ctx)
                     } else if next.token_type == LexerTokenType::OpenCurlyBrace {
-                        self.struct_literal()
+                        self.struct_literal(ctx)
                     } else {
                         self.next();
                         Expression::Identifier(Identifier::new(
@@ -1174,8 +1171,8 @@ impl Module {
     }
 
     // a.b()
-    fn parse_postfix_expression(&self) -> Expression {
-        let mut expr = self.member_expression();
+    fn parse_postfix_expression(&self, ctx: ExprCtx) -> Expression {
+        let mut expr = self.member_expression(ctx);
         while self.is_peekable() {
             let next = self.unsafe_peek();
             match next.token_type {
@@ -1203,7 +1200,7 @@ impl Module {
                             std::process::exit(1);
                         }
                     };
-                    let object_literal = self.object_literal();
+                    let object_literal = self.object_literal(ctx);
 
                     expr = Expression::StructLiteral(StructLiteral::new(
                         struct_type,
@@ -1221,7 +1218,7 @@ impl Module {
     }
 
     // person.name.to_string
-    fn member_expression(&self) -> Expression {
+    fn member_expression(&self, ctx: ExprCtx) -> Expression {
         // get the identifier
         let identifier_token = self.unsafe_peek();
         let mut node = Expression::Identifier(Identifier::new(
@@ -1261,12 +1258,115 @@ impl Module {
         node
     }
 
+    // [a, b, x]
+    fn vector(&self, context: Option<&str>, ctx: ExprCtx) -> Expression {
+        // where am i
+        let context_msg = match context {
+            Some(str) => format!(" in {}", str),
+            _ => "".to_string(),
+        };
+
+        let group_token = self.unsafe_peek();
+        let mut vector_node = Vector::new(group_token.at, group_token.line);
+
+        // check '['
+        if group_token.token_type == LexerTokenType::OpenSquareBracket {
+            self.next()
+        } else {
+            error::throw(
+                ErrorType::SyntaxError,
+                format!("Unexpected token '{}'{}", group_token.value, context_msg).as_str(),
+                Some(group_token.line),
+            )
+        }
+
+        // get arguments & check ']'
+        let mut last_token = None;
+        let mut closed = false;
+
+        while self.is_peekable() {
+            let token = self.unsafe_peek();
+
+            match token.token_type {
+                LexerTokenType::Comma => {
+                    if last_token == Some(LexerTokenType::Comma) {
+                        error::throw(
+                            ErrorType::MissingMemberError,
+                            format!("<empty> not valid as a vector member").as_str(),
+                            Some(group_token.line),
+                        )
+                    }
+
+                    last_token = Some(LexerTokenType::Comma);
+                    self.next();
+                }
+                LexerTokenType::CloseSquareBracket => {
+                    if last_token == Some(LexerTokenType::Comma) {
+                        error::throw(
+                            ErrorType::MissingMemberError,
+                            format!("<empty> not valid as a vector member").as_str(),
+                            Some(group_token.line),
+                        )
+                    }
+
+                    closed = true;
+                    break;
+                }
+                _ => {
+                    let node = self.parse_comparison(ctx);
+                    match node {
+                        Expression::Identifier(_) => last_token = Some(LexerTokenType::Identifier),
+                        Expression::Bool(_) => last_token = Some(LexerTokenType::TrueKeyword),
+                        Expression::Number(_) => last_token = Some(LexerTokenType::Number),
+                        Expression::Nothing(_) => last_token = Some(LexerTokenType::NothingKeyword),
+                        Expression::StringLiteral(_) => {
+                            last_token = Some(LexerTokenType::StringLiteral)
+                        }
+                        Expression::CallExpression(_) => {
+                            last_token = Some(LexerTokenType::Identifier)
+                        }
+                        Expression::BinaryExpression(_) => {
+                            last_token = Some(LexerTokenType::Number)
+                        }
+                        Expression::StructLiteral(_) => {
+                            last_token = Some(LexerTokenType::Identifier)
+                        }
+                        Expression::Vector(_) => {
+                            last_token = Some(LexerTokenType::OpenSquareBracket)
+                        }
+                        Expression::ObjectLiteral(_) => {
+                            // use identifier as a fallback
+                            last_token = Some(LexerTokenType::Identifier)
+                        }
+                        Expression::MemberExpression(_) => {
+                            last_token = Some(LexerTokenType::Identifier)
+                        }
+                    }
+                    vector_node.add_child(node);
+                }
+            }
+        }
+
+        // non closed CallExpression
+        if !closed {
+            error::throw(
+                ErrorType::SyntaxError,
+                format!("Expected ']' {}", context_msg).as_str(),
+                Some(vector_node.line),
+            )
+        };
+
+        // consume ']'
+        self.next();
+        Expression::Vector(vector_node)
+    }
+
     // Person {
     //   name: string,
     //   surname: string,
     //   phone_number: number
     // }
-    fn struct_literal(&self) -> Expression {
+    fn struct_literal(&self, ctx: ExprCtx) -> Expression {
         // consume struct identifier
         let token = self.peek("<Identifier>");
         if token.token_type != LexerTokenType::Identifier {
@@ -1280,7 +1380,7 @@ impl Module {
 
         // check for block
         self.next();
-        let object_literal_node = self.object_literal();
+        let object_literal_node = self.object_literal(ctx);
 
         Expression::StructLiteral(StructLiteral::new(
             StructTypeExpr::Identifier(identifier_node),
@@ -1295,7 +1395,7 @@ impl Module {
     //   ...: value,
     //   ...: value
     // }
-    fn object_literal(&self) -> ObjectLiteral {
+    fn object_literal(&self, ctx: ExprCtx) -> ObjectLiteral {
         // check '{'
         let token = self.unsafe_peek();
         if token.token_type == LexerTokenType::OpenCurlyBrace {
@@ -1346,7 +1446,7 @@ impl Module {
 
             // get field expression
             self.next();
-            let expression_node = self.parse_comparison();
+            let expression_node = self.parse_comparison(ctx);
 
             // add field to the object_type_node
             object_literal_node.add_field(identifier_node, expression_node);
@@ -1378,41 +1478,5 @@ impl Module {
         };
 
         object_literal_node
-    }
-
-    // : bool | : string | : number | : nothing
-    fn type_annotation(&self) -> Option<Type> {
-        if self.peek(":").token_type == LexerTokenType::Colon {
-            // consume ':'
-            self.next();
-            if self.is_peekable() {
-                let possible_type = self.unsafe_peek();
-                self.next(); // consume 'annotated type'
-                match possible_type.token_type {
-                    LexerTokenType::NumberKeyword => Some(Type::Number),
-                    LexerTokenType::StringKeyword => Some(Type::String),
-                    LexerTokenType::BoolKeyword => Some(Type::Bool),
-                    LexerTokenType::NothingKeyword => Some(Type::Nothing),
-                    _ => {
-                        error::throw(
-                            ErrorType::InvalidTypeAnnotation,
-                            format!("Expected type after ':' but got '{}'", possible_type.value)
-                                .as_str(),
-                            None,
-                        );
-                        std::process::exit(1);
-                    }
-                }
-            } else {
-                error::throw(
-                    ErrorType::ParsingError,
-                    format!("Expected type after ':' but got and early end of module").as_str(),
-                    None,
-                );
-                std::process::exit(1);
-            }
-        } else {
-            None
-        }
     }
 }
