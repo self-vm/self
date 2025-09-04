@@ -47,6 +47,16 @@ impl Value {
         }
     }
 
+    pub fn get_resolved_type(&self, vm: &Vm) -> String {
+        match self {
+            Value::RawValue(x) => x.get_type_string(),
+            Value::HeapRef(_) => "HEAP_REF".to_string(),
+            Value::BoundAccess(_) => "BOUND_ACCESS".to_string(),
+            Value::Handle(handle) => vm.memory.resolve(handle).get_type(),
+            _ => "unkown_value_type".to_string(),
+        }
+    }
+
     pub fn as_mem_obj<'vm>(&self, vm: &'vm Vm) -> Result<&'vm MemObject, VMError> {
         match self {
             Value::Handle(v) => Ok(vm.memory.resolve(&v)),
@@ -94,15 +104,6 @@ impl Value {
                     VMErrorType::TypeMismatch {
                         expected: "string".to_string(),
                         received: "bound_access".to_string(),
-                    },
-                    vm,
-                ));
-            }
-            Value::Handle(_) => {
-                return Err(error::throw(
-                    VMErrorType::TypeMismatch {
-                        expected: "string".to_string(),
-                        received: "handle".to_string(),
                     },
                     vm,
                 ));
@@ -155,15 +156,6 @@ impl Value {
                     vm,
                 ));
             }
-            Value::Handle(_) => {
-                return Err(error::throw(
-                    VMErrorType::TypeMismatch {
-                        expected: "function".to_string(),
-                        received: "handle".to_string(),
-                    },
-                    vm,
-                ));
-            }
             _ => {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {
@@ -183,7 +175,7 @@ impl Value {
                 _ => {
                     return Err(error::throw(
                         VMErrorType::TypeMismatch {
-                            expected: "string".to_string(),
+                            expected: "bool".to_string(),
                             received: r.get_type_string(),
                         },
                         vm,
@@ -193,7 +185,7 @@ impl Value {
             Value::HeapRef(r) => {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {
-                        expected: "string".to_string(),
+                        expected: "bool".to_string(),
                         received: "heap_ref".to_string(),
                     },
                     vm,
@@ -202,8 +194,8 @@ impl Value {
             Value::BoundAccess(_) => {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {
-                        expected: "string".to_string(),
-                        received: "bound_access".to_string(),
+                        expected: "bool".to_string(),
+                        received: self.get_resolved_type(vm),
                     },
                     vm,
                 ));
@@ -211,8 +203,8 @@ impl Value {
             Value::Handle(_) => {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {
-                        expected: "string".to_string(),
-                        received: "handle".to_string(),
+                        expected: "bool".to_string(),
+                        received: self.get_resolved_type(vm),
                     },
                     vm,
                 ));

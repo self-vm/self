@@ -197,7 +197,23 @@ impl Vm {
                     };
 
                     let condition = condition.unwrap();
-                    match condition.value {
+                    match condition.value.clone() {
+                        Value::BoundAccess(v) => {
+                            let value = v.property.as_bool(self);
+                            match value {
+                                Ok(jump_if) => {
+                                    if !jump_if {
+                                        self.pc += offset as usize;
+                                    }
+                                }
+                                Err(err) => {
+                                    return VMExecutionResult::terminate_with_errors(
+                                        err.error_type,
+                                        self,
+                                    )
+                                }
+                            }
+                        }
                         Value::RawValue(v) => match v {
                             RawValue::Bool(execute_if) => {
                                 if debug {
