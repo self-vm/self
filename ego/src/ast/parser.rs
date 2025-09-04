@@ -1186,6 +1186,9 @@ impl Module {
                     ));
                 }
                 LexerTokenType::OpenCurlyBrace => {
+                    if !ctx.allow_struct_literal {
+                        break;
+                    }
                     let struct_type = match expr {
                         Expression::Identifier(i) => StructTypeExpr::Identifier(i),
                         Expression::MemberExpression(m) => {
