@@ -15,7 +15,6 @@ pub mod raw;
 #[derive(Debug, Clone)]
 pub enum Value {
     RawValue(RawValue),
-    HeapRef(HeapRef),
     Handle(Handle),
     BoundAccess(BoundAccess),
 }
@@ -24,13 +23,6 @@ impl Value {
     pub fn to_string(&self, vm: &Vm) -> String {
         match self {
             Value::RawValue(x) => x.to_string(),
-            Value::HeapRef(x) => {
-                if let Some(obj) = vm.heap.get(x.clone()) {
-                    obj.to_string(vm)
-                } else {
-                    "unkown_value_type".to_string()
-                }
-            }
             Value::BoundAccess(x) => x.property.to_string(vm),
             Value::Handle(x) => vm.memory.resolve(x).to_string(vm),
             _ => "unkown_value_type".to_string(),
@@ -40,7 +32,6 @@ impl Value {
     pub fn get_type(&self) -> String {
         match self {
             Value::RawValue(x) => x.get_type_string(),
-            Value::HeapRef(_) => "HEAP_REF".to_string(),
             Value::BoundAccess(_) => "BOUND_ACCESS".to_string(),
             Value::Handle(_) => "HANDLE".to_string(),
             _ => "unkown_value_type".to_string(),
@@ -50,7 +41,6 @@ impl Value {
     pub fn get_resolved_type(&self, vm: &Vm) -> String {
         match self {
             Value::RawValue(x) => x.get_type_string(),
-            Value::HeapRef(_) => "HEAP_REF".to_string(),
             Value::BoundAccess(_) => "BOUND_ACCESS".to_string(),
             Value::Handle(handle) => vm.memory.resolve(handle).get_type(),
             _ => "unkown_value_type".to_string(),
@@ -182,15 +172,6 @@ impl Value {
                     ));
                 }
             },
-            Value::HeapRef(r) => {
-                return Err(error::throw(
-                    VMErrorType::TypeMismatch {
-                        expected: "bool".to_string(),
-                        received: "heap_ref".to_string(),
-                    },
-                    vm,
-                ));
-            }
             Value::BoundAccess(_) => {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {

@@ -32,7 +32,6 @@ use super::types::*;
 pub struct Vm {
     operand_stack: Vec<OperandsStackValue>,
     pub call_stack: CallStack,
-    pub heap: Heap,
     pub memory: MemoryManager,
     bytecode: Vec<u8>,
     pc: usize,
@@ -58,7 +57,6 @@ impl Vm {
         Vm {
             operand_stack: vec![],
             call_stack: CallStack::new(),
-            heap: Heap::new(),
             memory: MemoryManager::new(),
             bytecode,
             pc: 0,
