@@ -11,6 +11,7 @@ pub mod group;
 pub mod identifier;
 pub mod if_statement;
 pub mod import_statement;
+pub mod lambda_expression;
 pub mod member_expression;
 pub mod module;
 pub mod nothing;
@@ -25,6 +26,7 @@ use std::fmt;
 
 use crate::ast::{
     export_statement::ExportStatement,
+    lambda_expression::LambdaExpression,
     member_expression::MemberExpression,
     objects::{ObjectLiteral, ObjectType},
     structs::{Struct, StructLiteral},
@@ -127,6 +129,9 @@ impl fmt::Display for AstNodeType {
             AstNodeType::Expression(Expression::MemberExpression(_)) => {
                 write!(f, "MemberExpression")
             }
+            AstNodeType::Expression(Expression::LambdaExpression(_)) => {
+                write!(f, "LambdaExpression")
+            }
             AstNodeType::Expression(Expression::BinaryExpression(_)) => {
                 write!(f, "BinaryExpression")
             }
@@ -152,6 +157,7 @@ pub enum Expression {
     StructLiteral(StructLiteral),
     ObjectLiteral(ObjectLiteral),
     MemberExpression(MemberExpression),
+    LambdaExpression(LambdaExpression),
     Vector(Vector),
     Nothing(Nothing),
 }

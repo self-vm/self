@@ -383,6 +383,10 @@ impl Module {
                             // use identifier as a fallback
                             last_token = Some(LexerTokenType::Identifier)
                         }
+                        Expression::LambdaExpression(_) => {
+                            // use identifier as a fallback
+                            last_token = Some(LexerTokenType::Arrow)
+                        }
                     }
                     group_node.add_child(Some(node));
                 }
@@ -1344,6 +1348,7 @@ impl Module {
                         Expression::MemberExpression(_) => {
                             last_token = Some(LexerTokenType::Identifier)
                         }
+                        Expression::LambdaExpression(_) => last_token = Some(LexerTokenType::Arrow),
                     }
                     vector_node.add_child(node);
                 }
