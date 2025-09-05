@@ -206,7 +206,43 @@ pub fn lex(source: String) -> Vec<LexerToken> {
                         }
                     }
                 }
-                '+' | '-' | '*' | '|' | '&' => {
+                '-' => {
+                    // lex arrows first
+                    if let Some(next) = chars.peek() {
+                        match next {
+                            '>' => {
+                                // for '->'
+                                chars.next(); // Consume the '>'
+                                current_token.push(c);
+                                current_token.push('>');
+                                tokens.push(token_with_type(
+                                    current_token.clone(),
+                                    line_counter,
+                                    line_char_counter,
+                                ));
+                                current_token.clear();
+                                continue;
+                            }
+                            _ => {
+                                if current_token.len() > 0 {
+                                    tokens.push(token_with_type(
+                                        current_token,
+                                        line_counter,
+                                        line_char_counter - 1,
+                                    )); // push previous token, - 1 since is the previous
+                                    current_token = String::new();
+                                }
+                                tokens.push(token_with_type(
+                                    c.to_string(),
+                                    line_counter,
+                                    line_char_counter,
+                                ));
+                                current_token = String::new();
+                            }
+                        }
+                    }
+                }
+                '+' | '*' | '|' | '&' => {
                     if current_token.len() > 0 {
                         tokens.push(token_with_type(
                             current_token,
@@ -369,6 +405,7 @@ fn token_with_type(token: String, line: usize, at: usize) -> LexerToken {
         "/" => LexerToken::new(LexerTokenType::DivideOperator, token, line, at),
         ">" => LexerToken::new(LexerTokenType::GreaterThanOperator, token, line, at),
         ">=" => LexerToken::new(LexerTokenType::GreaterThanOrEqualOperator, token, line, at),
+        "->" => LexerToken::new(LexerTokenType::Arrow, token, line, at),
         "<" => LexerToken::new(LexerTokenType::LessThanOperator, token, line, at),
         "<=" => LexerToken::new(LexerTokenType::LessThanOrEqualOperator, token, line, at),
         _ if token.chars().next() == Some('"') && token.chars().last() == Some('"') => {
