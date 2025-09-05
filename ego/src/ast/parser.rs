@@ -11,6 +11,7 @@ use crate::{
         group::{self, Group},
         identifier::Identifier,
         import_statement::ModuleType,
+        lambda_expression::LambdaExpression,
         member_expression::MemberExpression,
         module::ModuleAst,
         number::Number,
@@ -1069,20 +1070,24 @@ impl Module {
         let token = self.unsafe_peek();
         let expr = match token.token_type {
             LexerTokenType::OpenParenthesis => {
-                self.next(); // to consume the '('
-                let expr = self.parse_expression(ctx);
+                // consume "(...)"
+                let group_node = self.group(None);
+                let next_token = self.unsafe_peek();
 
-                let scoped_token = self.peek(")");
-                if scoped_token.token_type == LexerTokenType::CloseParenthesis {
-                    self.next(); // to consume the ')'
-                    expr
-                } else {
-                    error::throw(
-                        ErrorType::ParsingError,
-                        format!("Unexpected token '{}', expected ')'", scoped_token.value).as_str(),
-                        Some(scoped_token.line),
-                    );
-                    std::process::exit(1);
+                match next_token.token_type {
+                    LexerTokenType::Arrow => {
+                        let lambda_node = self.lambda_expression(group_node);
+                        lambda_node
+                    }
+                    _ => {
+                        error::throw(
+                            ErrorType::ParsingError,
+                            format!("Unexpected token '{}', expected ')'", next_token.value)
+                                .as_str(),
+                            Some(next_token.line),
+                        );
+                        std::process::exit(1);
+                    }
                 }
             }
             LexerTokenType::OpenSquareBracket => self.vector(Some("assignament statement"), ctx),
@@ -1263,6 +1268,34 @@ impl Module {
         }
 
         node
+    }
+
+    // () -> {...}
+    fn lambda_expression(&self, group: Group) -> Expression {
+        // consume '->' keyword
+        self.next();
+
+        // check for block
+        let token = self.peek("{");
+        let block_node = self.block();
+        let function_body = match block_node {
+            AstNodeType::Block(b) => b,
+            _ => {
+                error::throw(
+                    ErrorType::ParsingError,
+                    "Expected blockNode as function body",
+                    Some(token.line),
+                );
+                std::process::exit(1);
+            }
+        };
+
+        Expression::LambdaExpression(LambdaExpression::new(
+            group,
+            function_body,
+            token.at,
+            token.line,
+        ))
     }
 
     // [a, b, x]
