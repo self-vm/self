@@ -258,6 +258,53 @@ impl Compiler {
         // all expressions push a load_const opcode
         // except of identifier which loads a load_var opcode
         match node {
+            Expression::LambdaExpression(v) => {
+                let mut bytecode = vec![];
+
+                // load function args num/type/...
+                let parameters: Vec<String> = v
+                    .parameters
+                    .children
+                    .iter()
+                    .map(|c| match c {
+                        Some(Expression::Identifier(x)) => x.name.clone(),
+                        Some(_) => panic!("bad param type on lambda"),
+                        None => panic!("empty parameter in lambda function declaration"),
+                    })
+                    .collect();
+                let params_length = parameters.len();
+                for param in parameters {
+                    let param_bytecode = Compiler::compile_expression(
+                        &Expression::StringLiteral(StringLiteral {
+                            value: param.to_string(),
+                            raw_value: param,
+                            at: v.parameters.at,
+                            line: v.parameters.line,
+                        }),
+                        false,
+                    );
+                    bytecode.extend_from_slice(&param_bytecode);
+                }
+
+                // op
+                bytecode.push(get_bytecode("lambda".to_string()));
+
+                // // load function parameters_num
+                bytecode.extend_from_slice(&Compiler::compile_offset(params_length as i32));
+
+                // load body of the function
+                let body_bytecode = Compiler::compile_block(&v.body);
+                let body_bytecode_length = if body_bytecode.len() > i32::MAX as usize {
+                    panic!("lambda function declaration body is bigger than the limits");
+                } else {
+                    body_bytecode.len() as i32
+                };
+
+                bytecode.extend_from_slice(&Compiler::compile_offset(body_bytecode_length));
+                bytecode.extend_from_slice(&body_bytecode);
+
+                bytecode
+            }
             Expression::CallExpression(v) => {
                 let call_expression_bytecode = match v.get_callee().as_str() {
                     "print" => handlers::print_as_bytecode(v),
