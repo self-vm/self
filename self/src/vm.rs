@@ -1259,6 +1259,14 @@ impl Vm {
             }
             DataType::StructLiteral => 4, // fields count
             DataType::Vector => 4,        // elements count
+            DataType::Lambda => {
+                // 4 params count, 4 function block length
+                let params = 4;
+                let block_offset = 4;
+                let offset = Vm::read_offset(&self.bytecode[self.pc + 5..self.pc + 9]);
+
+                (params + block_offset + offset) as usize
+            }
             _ => {
                 println!("data_type: {:#?}", data_type);
                 panic!("Unsupported datatype")
@@ -1406,6 +1414,43 @@ impl Vm {
                     StructLiteral::new(resolved_struct_type.to_string(self), fields);
                 let value_handle = self.memory.alloc(MemObject::StructLiteral(struct_literal));
                 Value::Handle(value_handle)
+            }
+            DataType::Lambda => {
+                // params count
+                let params_count_bytes = if value.len() >= 4 {
+                    &value[0..4]
+                } else {
+                    panic!("lambda must contain more than 4 bytes");
+                };
+                let params_count = Vm::read_offset(params_count_bytes);
+                let params = self.get_stack_values(&(params_count as u32));
+                let params_names: Vec<String> = params
+                    .iter()
+                    .map(|p| p.as_string_obj(self).unwrap())
+                    .collect();
+
+                // lambda block
+                let block_length_bytes = if value.len() >= 8 {
+                    &value[4..8]
+                } else {
+                    panic!("lambda must contain more than 8 bytes");
+                };
+                let block_length = Vm::read_offset(block_length_bytes);
+
+                let block_bytes = if value.len() == (8 + block_length) as usize {
+                    &value[8..(8 + block_length) as usize]
+                } else {
+                    panic!("error. lambda block size is less than it's length offset");
+                };
+
+                let lambda_fn = MemObject::Function(Function::new(
+                    "lambda".to_string(),
+                    params_names,
+                    Engine::Bytecode(block_bytes.to_vec()),
+                ));
+                let func_handle = self.memory.alloc(lambda_fn);
+                printable_value = "lambda".to_string();
+                Value::Handle(func_handle)
             }
             DataType::Bool => {
                 if value.len() > 1 {

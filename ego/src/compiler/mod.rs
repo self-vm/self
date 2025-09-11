@@ -287,6 +287,7 @@ impl Compiler {
                 }
 
                 // op
+                bytecode.push(get_bytecode("load_const".to_string()));
                 bytecode.push(get_bytecode("lambda".to_string()));
 
                 // // load function parameters_num

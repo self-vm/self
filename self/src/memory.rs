@@ -12,6 +12,7 @@ use crate::{
     vm::Vm,
 };
 
+#[derive(Debug)]
 pub struct MemoryManager {
     heap: Heap,
     table: HashMap<u32, PointerType>,
@@ -126,7 +127,7 @@ impl Handle {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum PointerType {
     HeapPointer(HeapRef),
 }

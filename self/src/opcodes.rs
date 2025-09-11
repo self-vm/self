@@ -30,7 +30,6 @@ pub fn get_codes_map() -> HashMap<String, u8> {
     m.insert("import".to_string(), 0x15);
     m.insert("export".to_string(), 0x16);
     m.insert("return".to_string(), 0x17);
-    m.insert("lambda".to_string(), 0x18);
 
     // builtin functions opcode - level: 0
     m.insert("print".to_string(), 0x02);
@@ -53,6 +52,7 @@ pub fn get_codes_map() -> HashMap<String, u8> {
     m.insert("f64".to_string(), 0x07);
     m.insert("struct_literal".to_string(), 0x08);
     m.insert("vector".to_string(), 0x09);
+    m.insert("lambda".to_string(), 0x0a);
     m
 }
 
@@ -129,6 +129,7 @@ pub enum DataType {
     Vector,
     Bool,
     StructLiteral,
+    Lambda,
     Unknown,
 }
 
@@ -145,6 +146,7 @@ impl DataType {
             0x07 => DataType::F64,
             0x08 => DataType::StructLiteral,
             0x09 => DataType::Vector,
+            0x0a => DataType::Lambda,
             _ => DataType::Unknown,
         }
     }
@@ -161,6 +163,7 @@ impl DataType {
             DataType::StructLiteral => "struct_literal",
             DataType::Nothing => "nothing",
             DataType::Vector => "vector",
+            DataType::Lambda => "lambda",
             DataType::Unknown => "unknown",
         }
     }
