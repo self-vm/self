@@ -1,12 +1,11 @@
+set -euo pipefail
 echo -e "\n packaging self \n"
 
 # build binary
 cargo build --release 
 
 # move to more reasonable path
-if [ ! -d "out" ]; then
-  mkdir out
-fi
+mkdir -p out
 cp target/release/self-vm out/self
 
 # strip binary symbols
