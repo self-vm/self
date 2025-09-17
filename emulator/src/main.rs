@@ -1,7 +1,8 @@
 use std::env;
 use std::fs;
 
-fn main() {
+#[tokio::main(flavor = "multi_thread")]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     let contents = match fs::read_to_string("./main.ego") {
         Ok(contents) => contents,
@@ -16,7 +17,7 @@ fn main() {
         vm.debug_bytecode();
         println!("\n--- RUNTIME ----------\n");
     }
-    let execution = vm.run(&args);
+    let execution = vm.run(&args).await;
     if let Some(err) = execution.error {
         let error_msg = format!("{}: {}", err.message, err.semantic_message);
         eprintln!("\x1b[31m[ERR] \x1b[0m{error_msg}");

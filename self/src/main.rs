@@ -1,6 +1,7 @@
 use std::{env, fs, process};
 
-fn main() {
+#[tokio::main(flavor = "multi_thread")]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("usage: {} <bytecode_file>", args[0]);
@@ -15,5 +16,5 @@ fn main() {
     };
 
     let mut vm = self_vm::new(bytecode);
-    vm.run(&vec![]);
+    vm.run(&vec![]).await;
 }

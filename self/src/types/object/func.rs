@@ -1,9 +1,18 @@
 use crate::{core::error::VMError, memory::Handle, types::Value, vm::Vm};
+use futures::future::BoxFuture;
 
 #[derive(Debug, Clone)]
 pub enum Engine {
     Bytecode(Vec<u8>),
     Native(fn(&mut Vm, Option<Handle>, Vec<Value>, bool) -> Result<Value, VMError>),
+    NativeAsync(
+        for<'a> fn(
+            &'a mut Vm,
+            Option<Handle>,
+            Vec<Value>,
+            bool,
+        ) -> BoxFuture<'a, Result<Value, VMError>>,
+    ),
 }
 
 #[derive(Debug, Clone)]

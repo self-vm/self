@@ -8,6 +8,7 @@ PROVIDER.
 
 use std::vec;
 
+use futures::future::BoxFuture;
 use serde::Deserialize;
 use serde_json::Value as SValue;
 
@@ -199,7 +200,7 @@ pub fn do_fn(
     // execution. but we should have a way of on a
     // native module import executed the generic code
     // to have things on scope, like, exec function.
-    let exec_fn = Function::new("exec".to_string(), vec![], Engine::Native(exec));
+    let exec_fn = Function::new("exec".to_string(), vec![], Engine::NativeAsync(exec));
     let exec_ref = vm.memory.alloc(MemObject::Function(exec_fn));
 
     let actions: Vec<Action> = instructions
@@ -248,60 +249,64 @@ pub fn exec(
     _self: Option<Handle>,
     params: Vec<Value>,
     debug: bool,
-) -> Result<Value, VMError> {
-    // resolve 'self'
-    let (_self, _self_ref) = if let Some(_this) = _self {
-        if let MemObject::NativeStruct(NativeStruct::Action(ns)) = vm.memory.resolve(&_this) {
-            (ns, _this)
+) -> BoxFuture<'_, Result<Value, VMError>> {
+    Box::pin(async move {
+        // resolve 'self'
+        let (_self, _self_ref) = if let Some(_this) = _self {
+            if let MemObject::NativeStruct(NativeStruct::Action(ns)) = vm.memory.resolve(&_this) {
+                (ns, _this)
+            } else {
+                unreachable!()
+            }
         } else {
             unreachable!()
-        }
-    } else {
-        unreachable!()
-    };
+        };
 
-    if debug {
-        println!("ACTION <- {}.{}", _self.module, _self.member);
-    }
-    let native_module_type = if let Some(nmt) = get_native_module_type(&_self.module) {
-        nmt
-    } else {
-        return Err(error::throw(
-            VMErrorType::Action(ActionError::InvalidModule(_self.module.clone())),
-            vm,
-        ));
-    };
-    let native_module = generate_native_module(native_module_type);
-    let fields = native_module.1;
-    let member = if let Some(member) = fields.iter().find(|m| m.0 == _self.member) {
-        member
-    } else {
-        return Err(error::throw(
-            VMErrorType::Action(ActionError::InvalidMember {
-                module: _self.module.clone(),
-                member: _self.member.clone(),
-            }),
-            vm,
-        ));
-    };
+        if debug {
+            println!("ACTION <- {}.{}", _self.module, _self.member);
+        }
+        let native_module_type = if let Some(nmt) = get_native_module_type(&_self.module) {
+            nmt
+        } else {
+            return Err(error::throw(
+                VMErrorType::Action(ActionError::InvalidModule(_self.module.clone())),
+                vm,
+            ));
+        };
+        let native_module = generate_native_module(native_module_type);
+        let fields = native_module.1;
+        let member = if let Some(member) = fields.iter().find(|m| m.0 == _self.member) {
+            member
+        } else {
+            return Err(error::throw(
+                VMErrorType::Action(ActionError::InvalidMember {
+                    module: _self.module.clone(),
+                    member: _self.member.clone(),
+                }),
+                vm,
+            ));
+        };
 
-    match &member.1 {
-        MemObject::Function(f) => {
-            let execution = vm.run_function(&f.clone(), Some(_self_ref), _self.args.clone(), debug);
-            if let Some(err) = execution.error {
-                return Err(err);
+        match &member.1 {
+            MemObject::Function(f) => {
+                let execution = vm
+                    .run_function(&f.clone(), Some(_self_ref), _self.args.clone(), debug)
+                    .await;
+                if let Some(err) = execution.error {
+                    return Err(err);
+                }
+                if let Some(result) = execution.result {
+                    return Ok(result);
+                }
+                return Ok(Value::RawValue(RawValue::Nothing));
             }
-            if let Some(result) = execution.result {
-                return Ok(result);
+            _ => {
+                // TODO: use self-vm errors system
+                // in principle this should not happen since
+                // to the AI should arrive only valid callable
+                // members from the stdlib modules
+                panic!("error, member is not callable");
             }
-            return Ok(Value::RawValue(RawValue::Nothing));
         }
-        _ => {
-            // TODO: use self-vm errors system
-            // in principle this should not happen since
-            // to the AI should arrive only valid callable
-            // members from the stdlib modules
-            panic!("error, member is not callable");
-        }
-    }
+    })
 }

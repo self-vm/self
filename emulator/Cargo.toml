@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 "ego" = { path = "../ego" }
 "self-vm" = { path = "../self" }
+tokio = { version = "1.47.1", features = ["rt-multi-thread"] }
