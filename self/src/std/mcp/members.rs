@@ -6,11 +6,12 @@
 use crate::{
     core::error::{self, type_errors::TypeError, VMError, VMErrorType},
     memory::{Handle, MemObject},
-    std::mcp::types::McpClient,
+    std::mcp::types::{McpClient, McpTool},
     types::{
         object::{
             func::{Engine, Function},
             native_struct::NativeStruct,
+            vector::Vector,
         },
         raw::RawValue,
         Value,
@@ -107,10 +108,22 @@ pub fn list_tools(
         let guard = client_arc.lock().await;
         let client = guard.as_ref().expect("mcp client it's not connected");
 
-        let tools = client.list_tools(None).await.expect("panic");
+        let tools_obj = client.list_tools(None).await.expect("panic");
+        let mut tools_refs = Vec::with_capacity(tools_obj.tools.len());
 
-        println!("{:#?}", tools);
-        Ok(Value::RawValue(RawValue::Nothing))
+        for t in &tools_obj.tools {
+            let desc = t.description.as_ref().map(|d| d.to_string());
+            let mtool = McpTool::new(t.name.to_string(), desc, vm);
+
+            let handle = vm
+                .memory
+                .alloc(MemObject::NativeStruct(NativeStruct::McpTool(mtool)));
+            tools_refs.push(Value::Handle(handle));
+        }
+
+        let vector = Vector::new_initialized(tools_refs, vm);
+        let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
+        return Ok(Value::Handle(vector_handle));
     })
 }
 

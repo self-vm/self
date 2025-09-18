@@ -4,6 +4,7 @@ use futures::lock::Mutex;
 use rmcp::{model::InitializeRequestParam, service::RunningService, RoleClient};
 
 use crate::{
+    memory::MemObject,
     std::mcp::members::{list_tools_obj, shutdown_obj},
     types::{object::structs::StructLiteral, Value},
     vm::Vm,
@@ -51,5 +52,36 @@ impl McpClient {
 
     pub fn to_string(&self) -> String {
         format!("McpClient({})", self.url)
+    }
+}
+
+#[derive(Debug)]
+pub struct McpTool {
+    pub name: String,
+    pub shape: StructLiteral,
+}
+
+impl McpTool {
+    pub fn new(name: String, description: Option<String>, vm: &mut Vm) -> McpTool {
+        let mut fields = HashMap::new();
+
+        // add name in struct and in struct.shape to allow
+        // direct rust access and direct ego access
+        let name_handle = vm.memory.alloc(MemObject::String(name.clone()));
+        fields.insert("name".to_string(), Value::Handle(name_handle));
+
+        if let Some(desc) = description {
+            let desc_handle = vm.memory.alloc(MemObject::String(desc));
+            fields.insert("description".to_string(), Value::Handle(desc_handle));
+        }
+
+        McpTool {
+            name: name,
+            shape: StructLiteral::new("McpTool".to_string(), fields),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("McpTool({})", self.name)
     }
 }
