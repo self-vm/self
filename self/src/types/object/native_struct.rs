@@ -1,6 +1,7 @@
 use crate::{
     std::{
         ai::types::Action,
+        mcp::types::McpClient,
         net::types::{NetServer, NetStream},
     },
     types::Value,
@@ -11,6 +12,7 @@ pub enum NativeStruct {
     NetServer(NetServer),
     NetStream(NetStream),
     Action(Action),
+    McpClient(McpClient),
 }
 
 impl NativeStruct {
@@ -19,6 +21,7 @@ impl NativeStruct {
             NativeStruct::NetStream(x) => x.to_string(),
             NativeStruct::NetServer(x) => x.to_string(),
             NativeStruct::Action(x) => x.to_string(),
+            NativeStruct::McpClient(x) => x.to_string(),
         }
     }
 
@@ -29,6 +32,7 @@ impl NativeStruct {
         match self {
             NativeStruct::NetStream(x) => x.shape.property_access(property),
             NativeStruct::NetServer(x) => x.shape.property_access(property),
+            NativeStruct::McpClient(x) => x.shape.property_access(property),
             NativeStruct::Action(x) => x.property_access(property),
         }
     }
