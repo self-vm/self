@@ -3,7 +3,7 @@ use crate::{
     heap::HeapRef,
     memory::{Handle, MemObject},
     types::{
-        object::{func::Function, BoundAccess},
+        object::{func::Function, structs::StructLiteral, BoundAccess},
         raw::RawValue,
     },
     vm::Vm,
@@ -102,6 +102,54 @@ impl Value {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {
                         expected: "string".to_string(),
+                        received: "unknown_type".to_string(),
+                    },
+                    vm,
+                ));
+            }
+        }
+    }
+
+    pub fn as_struct_obj(&self, vm: &Vm) -> Result<StructLiteral, VMError> {
+        match self {
+            Value::Handle(r) => {
+                let heap_obj = vm.memory.resolve(&r);
+                let request = match heap_obj {
+                    MemObject::StructLiteral(s) => s,
+                    _ => {
+                        return Err(error::throw(
+                            VMErrorType::TypeMismatch {
+                                expected: "StructLiteral".to_string(),
+                                received: heap_obj.to_string(vm),
+                            },
+                            vm,
+                        ));
+                    }
+                };
+                Ok(request.clone())
+            }
+            Value::RawValue(r) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "StructLiteral".to_string(),
+                        received: r.get_type_string(),
+                    },
+                    vm,
+                ));
+            }
+            Value::BoundAccess(_) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "StructLiteral".to_string(),
+                        received: "bound_access".to_string(),
+                    },
+                    vm,
+                ));
+            }
+            _ => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "StructLiteral".to_string(),
                         received: "unknown_type".to_string(),
                     },
                     vm,

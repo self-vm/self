@@ -1091,6 +1091,7 @@ impl Module {
                 }
             }
             LexerTokenType::OpenSquareBracket => self.vector(Some("assignament statement"), ctx),
+            LexerTokenType::OpenCurlyBrace => Expression::ObjectLiteral(self.object_literal(ctx)),
             LexerTokenType::Number => {
                 let number_node = Number::from_string(token.value.clone(), token.at, token.line);
 
@@ -1459,7 +1460,24 @@ impl Module {
         // get inside block ast nodes & check '}'
         let mut closed = false;
 
+        // first we look at , or } to allow "{}" objects
         while self.is_peekable() {
+            // check for closing '}' or the ',' after field
+            let end_of_field = self.peek("<,>");
+            if LexerTokenType::Comma == end_of_field.token_type {
+                self.next();
+            } else if LexerTokenType::CloseCurlyBrace == end_of_field.token_type {
+                closed = true;
+                self.next();
+                break;
+            } else {
+                error::throw(
+                    ErrorType::SyntaxError,
+                    format!("Expected '}}' but got '{}'", end_of_field.value).as_str(),
+                    Some(token.line),
+                )
+            };
+
             // consume identifier
             let token = self.peek("<Identifier>");
             if token.token_type != LexerTokenType::Identifier {
@@ -1491,22 +1509,6 @@ impl Module {
 
             // add field to the object_type_node
             object_literal_node.add_field(identifier_node, expression_node);
-
-            // check for closing '}' or the ',' after field
-            let end_of_field = self.peek("<,>");
-            if LexerTokenType::Comma == end_of_field.token_type {
-                self.next();
-            } else if LexerTokenType::CloseCurlyBrace == end_of_field.token_type {
-                closed = true;
-                self.next();
-                break;
-            } else {
-                error::throw(
-                    ErrorType::SyntaxError,
-                    format!("Expected '}}' but got '{}'", end_of_field.value).as_str(),
-                    Some(token.line),
-                )
-            };
         }
 
         // non closed Block

@@ -352,6 +352,34 @@ impl Compiler {
 
                 bytecode
             }
+            Expression::ObjectLiteral(v) => {
+                let mut bytecode = vec![];
+
+                // first, load field values onto the stack
+                let (fields_num, object_literal_bytecode) = &Compiler::compile_object_literal(&v);
+                bytecode.extend_from_slice(&object_literal_bytecode);
+
+                // struct type
+                let struct_type_bytecode = Compiler::compile_expression(
+                    &Expression::StringLiteral(StringLiteral::new(
+                        "StructLiteral".to_string(),
+                        "StructLiteral".to_string(),
+                        0,
+                        0,
+                    )),
+                    false,
+                );
+                bytecode.extend_from_slice(&struct_type_bytecode);
+
+                // compile struct
+                bytecode.push(get_bytecode("load_const".to_string()));
+                bytecode.push(get_bytecode("struct_literal".to_string()));
+
+                // compile object fields number
+                bytecode.extend_from_slice(&Compiler::compile_offset(*fields_num as i32));
+
+                bytecode
+            }
             Expression::Vector(v) => {
                 let mut bytecode = vec![];
                 let elements_num = v.children.len();
