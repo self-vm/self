@@ -40,10 +40,10 @@ pub fn init(
     debug: bool,
 ) -> BoxFuture<'_, Result<Value, VMError>> {
     Box::pin(async move {
-        if params.len() < 1 {
+        if params.len() < 2 {
             return Err(error::throw(
                 VMErrorType::TypeError(TypeError::InvalidArgsCount {
-                    expected: 1,
+                    expected: 2,
                     received: params.len() as u32,
                 }),
                 vm,
@@ -51,6 +51,8 @@ pub fn init(
         }
 
         let url = &params[0].as_string_obj(vm)?;
+        let config = &params[1].as_struct_obj(vm)?;
+
         if debug {
             println!("MCP_INIT -> {}", url);
         }
