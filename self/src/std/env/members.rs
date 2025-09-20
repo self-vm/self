@@ -1,5 +1,5 @@
 use crate::{
-    core::error::{self, type_errors::TypeError, VMError, VMErrorType},
+    core::error::{self, fs_errors::FsError, type_errors::TypeError, VMError, VMErrorType},
     heap::HeapRef,
     memory::{Handle, MemObject},
     types::{
@@ -9,7 +9,7 @@ use crate::{
     },
     vm::Vm,
 };
-use std::env;
+use std::{env, path::PathBuf};
 
 // environment variable set
 pub fn set_obj() -> MemObject {
@@ -84,4 +84,56 @@ pub fn get(
         }
         Err(_) => Ok(Value::RawValue(RawValue::Nothing)),
     }
+}
+
+// read a .env file
+pub fn read_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "read".to_string(),
+        vec![],
+        Engine::Native(read),
+    ))
+}
+
+pub fn read(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> Result<Value, VMError> {
+    let cwd = env::current_dir().map_err(|e| {
+        // TODO: use self-vm errors system
+        panic!("cannot get cwd in env.read");
+    })?;
+
+    let path_buf = if let Some(v) = params.get(0) {
+        let s = v.as_string_obj(vm)?;
+        let mut p = PathBuf::from(&s);
+
+        if p.is_relative() {
+            p = cwd.join(p);
+        }
+
+        if p.is_dir() {
+            p = p.join(".env");
+        }
+
+        p
+    } else {
+        cwd.join(".env")
+    };
+
+    if debug {
+        println!("ENV_READ -> {}", path_buf.display());
+    }
+
+    let p = path_buf.display().to_string();
+    dotenvy::from_path(path_buf).map_err(|e| match e {
+        dotenvy::Error::Io(ioe) if ioe.kind() == std::io::ErrorKind::NotFound => {
+            error::throw(VMErrorType::Fs(FsError::FileNotFound(p)), vm)
+        }
+        _ => error::throw(VMErrorType::Fs(FsError::FileNotFound(p)), vm),
+    })?;
+
+    Ok(Value::RawValue(RawValue::Nothing))
 }
