@@ -98,48 +98,49 @@ pub fn infer(
     _self: Option<Handle>,
     params: Vec<Value>,
     debug: bool,
-) -> Result<Value, VMError> {
-    let request_ref = params[0].clone();
-    let request = request_ref.as_string_obj(vm)?;
-    let context_ref = params[1].clone();
-    let context = context_ref.as_string_obj(vm)?;
+) -> BoxFuture<Result<Value, VMError>> {
+    Box::pin(async move {
+        let request_ref = params[0].clone();
+        let request = request_ref.as_string_obj(vm)?;
+        let context_ref = params[1].clone();
+        let context = context_ref.as_string_obj(vm)?;
 
-    if debug {
-        println!("AI <- {}({})", request, context.to_string());
-    }
-
-    // we should try to avoid prompt injection
-    // maybe using multiple prompts?
-    let prompt = infer_prompt(&request, &context);
-    let res = fetch_ai(prompt);
-    let res = match res {
-        Ok(r) => r,
-        Err(vm_err) => {
-            return Err(error::throw(vm_err, vm));
+        if debug {
+            println!("AI <- {}({})", request, context.to_string());
         }
-    };
 
-    if !res.status().is_success() {
-        println!("AI (FAILED) -> {}", res.status());
-        return Err(error::throw(
-            VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
-            vm,
-        ));
-    }
+        // we should try to avoid prompt injection
+        // maybe using multiple prompts?
+        let prompt = infer_prompt(&request, &context);
+        let res = fetch_ai(prompt).await;
+        let res = match res {
+            Ok(r) => r,
+            Err(vm_err) => {
+                return Err(error::throw(vm_err, vm));
+            }
+        };
 
-    let response: ChatResponse = res.json().expect("AI: Failed to parse response");
-    let answer = &response.choices[0].message.content;
+        if !res.status().is_success() {
+            return Err(error::throw(
+                VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
+                vm,
+            ));
+        }
 
-    if debug {
-        println!("AI -> {}", answer);
-    }
+        let response: ChatResponse = res.json().await.expect("AI: Failed to parse response");
+        let answer = &response.choices[0].message.content;
 
-    let parsed_answer = ai_response_parser(answer);
-    if let Some(v) = parsed_answer {
-        return Ok(v);
-    } else {
-        return Ok(Value::RawValue(RawValue::Nothing));
-    }
+        if debug {
+            println!("AI -> {}", answer);
+        }
+
+        let parsed_answer = ai_response_parser(answer);
+        if let Some(v) = parsed_answer {
+            return Ok(v);
+        } else {
+            return Ok(Value::RawValue(RawValue::Nothing));
+        }
+    })
 }
 
 pub fn do_fn(
@@ -147,101 +148,103 @@ pub fn do_fn(
     _self: Option<Handle>,
     params: Vec<Value>,
     debug: bool,
-) -> Result<Value, VMError> {
-    let request_ref = params[0].clone();
-    let request = request_ref.as_string_obj(vm)?;
+) -> BoxFuture<Result<Value, VMError>> {
+    Box::pin(async move {
+        let request_ref = params[0].clone();
+        let request = request_ref.as_string_obj(vm)?;
 
-    if debug {
-        println!("AI.DO <- {}", request);
-    }
-
-    let stdlib_defs: Vec<String> = gen_native_modules_defs()
-        .iter()
-        .map(|nm| nm.to_string())
-        .collect();
-
-    // we should try to avoid prompt injection
-    // maybe using multiple prompts?
-    let prompt = do_prompt(stdlib_defs, &request);
-    let res = fetch_ai(prompt);
-    let res = match res {
-        Ok(r) => r,
-        Err(vm_err) => {
-            return Err(error::throw(vm_err, vm));
+        if debug {
+            println!("AI.DO <- {}", request);
         }
-    };
 
-    if !res.status().is_success() {
-        println!("AI.DO (FAILED) -> {}", res.status());
-        return Err(error::throw(
-            VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
-            vm,
-        ));
-    }
+        let stdlib_defs: Vec<String> = gen_native_modules_defs()
+            .iter()
+            .map(|nm| nm.to_string())
+            .collect();
 
-    let response: ChatResponse = res.json().expect("AI.DO: Failed to parse response");
-    let answer = &response.choices[0].message.content;
+        // we should try to avoid prompt injection
+        // maybe using multiple prompts?
+        let prompt = do_prompt(stdlib_defs, &request);
+        let res = fetch_ai(prompt).await;
+        let res = match res {
+            Ok(r) => r,
+            Err(vm_err) => {
+                return Err(error::throw(vm_err, vm));
+            }
+        };
 
-    if debug {
-        println!("AI -> {}", answer);
-    }
+        if !res.status().is_success() {
+            println!("AI.DO (FAILED) -> {}", res.status());
+            return Err(error::throw(
+                VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
+                vm,
+            ));
+        }
 
-    let cleaned = get_response_json(answer);
-    let instructions: Vec<AIAction> = if let Ok(val) = serde_json::from_str(cleaned.as_str()) {
-        val
-    } else {
-        return Ok(Value::RawValue(RawValue::Nothing));
-    };
-    if instructions.len() < 1 {
-        return Ok(Value::RawValue(RawValue::Nothing));
-    }
+        let response: ChatResponse = res.json().await.expect("AI.DO: Failed to parse response");
+        let answer = &response.choices[0].message.content;
 
-    // for the moment the function is allocated on
-    // execution. but we should have a way of on a
-    // native module import executed the generic code
-    // to have things on scope, like, exec function.
-    let exec_fn = Function::new("exec".to_string(), vec![], Engine::NativeAsync(exec));
-    let exec_ref = vm.memory.alloc(MemObject::Function(exec_fn));
+        if debug {
+            println!("AI -> {}", answer);
+        }
 
-    let actions: Vec<Action> = instructions
-        .iter()
-        .map(|instr| {
-            Action::new(
-                instr.module.clone(),
-                exec_ref.clone(),
-                instr.member.clone(),
-                instr
-                    .params
-                    .iter()
-                    .map(|p| {
-                        if let Some(v) = cast_json_value(p) {
-                            v
-                        } else {
-                            Value::RawValue(RawValue::Nothing)
-                        }
-                    })
-                    .collect::<Vec<Value>>(),
-            )
-        })
-        .collect();
+        let cleaned = get_response_json(answer);
+        let instructions: Vec<AIAction> = if let Ok(val) = serde_json::from_str(cleaned.as_str()) {
+            val
+        } else {
+            return Ok(Value::RawValue(RawValue::Nothing));
+        };
+        if instructions.len() < 1 {
+            return Ok(Value::RawValue(RawValue::Nothing));
+        }
 
-    if debug {
-        println!("AI.DO <- {:#?}", actions)
-    }
+        // for the moment the function is allocated on
+        // execution. but we should have a way of on a
+        // native module import executed the generic code
+        // to have things on scope, like, exec function.
+        let exec_fn = Function::new("exec".to_string(), vec![], Engine::NativeAsync(exec));
+        let exec_ref = vm.memory.alloc(MemObject::Function(exec_fn));
 
-    let mut actions_ref = vec![];
-    for action in actions {
-        actions_ref.push(Value::Handle(
-            vm.memory
-                .alloc(MemObject::NativeStruct(NativeStruct::Action(action))),
-        ));
-    }
+        let actions: Vec<Action> = instructions
+            .iter()
+            .map(|instr| {
+                Action::new(
+                    instr.module.clone(),
+                    exec_ref.clone(),
+                    instr.member.clone(),
+                    instr
+                        .params
+                        .iter()
+                        .map(|p| {
+                            if let Some(v) = cast_json_value(p) {
+                                v
+                            } else {
+                                Value::RawValue(RawValue::Nothing)
+                            }
+                        })
+                        .collect::<Vec<Value>>(),
+                )
+            })
+            .collect();
 
-    // store all actions ref in a vector and return the
-    // vector allocated heap ref
-    let vector = Vector::new_initialized(actions_ref, vm);
-    let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
-    return Ok(Value::Handle(vector_handle));
+        if debug {
+            println!("AI.DO <- {:#?}", actions)
+        }
+
+        let mut actions_ref = vec![];
+        for action in actions {
+            actions_ref.push(Value::Handle(
+                vm.memory
+                    .alloc(MemObject::NativeStruct(NativeStruct::Action(action))),
+            ));
+        }
+
+        // store all actions ref in a vector and return the
+        // vector allocated heap ref
+        let vector = Vector::new_initialized(actions_ref, vm);
+        let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
+        return Ok(Value::Handle(vector_handle));
+    })
 }
 
 pub fn exec(

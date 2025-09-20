@@ -1,10 +1,10 @@
 use std::{env, vec};
 
-use reqwest::{blocking::Client, blocking::Response};
+use reqwest::{Client, Response};
 
 use crate::std::ai::providers::{ChatRequest, Message};
 
-pub fn fetch(prompt: String) -> Response {
+pub async fn fetch(prompt: String) -> Response {
     let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not set");
 
     let client = Client::new();
@@ -21,6 +21,7 @@ pub fn fetch(prompt: String) -> Response {
         .bearer_auth(api_key)
         .json(&request_body)
         .send()
+        .await
         .expect("AI: Failed to send request");
 
     res

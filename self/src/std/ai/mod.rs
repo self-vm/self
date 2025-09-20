@@ -21,12 +21,12 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     let infer_ref = MemObject::Function(Function::new(
         "infer".to_string(),
         vec![], // TODO: load params to native functions
-        Engine::Native(infer),
+        Engine::NativeAsync(infer),
     ));
     let do_ref = MemObject::Function(Function::new(
         "do".to_string(),
         vec![], // TODO: load params to native functions
-        Engine::Native(do_fn),
+        Engine::NativeAsync(do_fn),
     ));
     let engine_ref = MemObject::StructDeclaration(StructDeclaration {
         identifier: "Engine".to_string(),
