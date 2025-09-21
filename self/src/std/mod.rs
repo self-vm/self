@@ -4,6 +4,7 @@ pub mod ai;
 pub mod env;
 pub mod fs;
 pub mod heap_utils;
+pub mod io;
 pub mod mcp;
 pub mod net;
 pub mod os;
@@ -23,6 +24,7 @@ pub enum NativeModule {
     Env,
     Web,
     Path,
+    Io,
 }
 
 pub struct NativeMember {
@@ -81,6 +83,7 @@ pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
         "path" => Some(NativeModule::Path),
         "mcp" => Some(NativeModule::Mcp),
         "web" => Some(NativeModule::Web),
+        "io" => Some(NativeModule::Io),
         _ => None,
     }
 }
@@ -98,6 +101,7 @@ pub fn generate_native_module(
         NativeModule::Path => path::generate_struct(),
         NativeModule::Mcp => mcp::generate_struct(),
         NativeModule::Web => web::generate_struct(),
+        NativeModule::Io => io::generate_struct(),
     }
 }
 
