@@ -33,6 +33,7 @@ pub enum VMErrorType {
     Action(ActionError),
     Net(NetErrors),
     Struct(StructError),
+    Any(String),
 }
 
 #[derive(Debug)]
@@ -143,6 +144,7 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
                 format!("'{}' on {}", field, struct_type),
             ),
         },
+        VMErrorType::Any(s) => ("Error".to_string(), format!("{}", s)),
     };
 
     VMError {

@@ -11,6 +11,7 @@ pub mod path;
 pub mod selfmod;
 mod utils;
 pub mod vector;
+pub mod web;
 
 pub enum NativeModule {
     AI,
@@ -20,6 +21,7 @@ pub enum NativeModule {
     Os,
     Net,
     Env,
+    Web,
     Path,
 }
 
@@ -78,6 +80,7 @@ pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
         "env" => Some(NativeModule::Env),
         "path" => Some(NativeModule::Path),
         "mcp" => Some(NativeModule::Mcp),
+        "web" => Some(NativeModule::Web),
         _ => None,
     }
 }
@@ -94,6 +97,7 @@ pub fn generate_native_module(
         NativeModule::Env => env::generate_struct(),
         NativeModule::Path => path::generate_struct(),
         NativeModule::Mcp => mcp::generate_struct(),
+        NativeModule::Web => web::generate_struct(),
     }
 }
 
