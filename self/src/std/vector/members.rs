@@ -144,7 +144,7 @@ fn map_reduce(
         let mut accumulator = Value::RawValue(RawValue::Nothing);
         for ele in &_self.elements {
             let exec_result = vm
-                .run_function(&callback, None, vec![accumulator, ele.clone()], debug)
+                .run_function(&callback, None, vec![ele.clone(), accumulator], debug)
                 .await;
             if let Some(err) = exec_result.error {
                 return Err(err);
