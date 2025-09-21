@@ -359,8 +359,33 @@ pub fn exec(
 
         match &member.1 {
             MemObject::Function(f) => {
+                let mut consumer_param_counter = 0;
+                let resolved_action_params: Vec<Value> = _self
+                    .args
+                    .iter()
+                    .enumerate()
+                    .map(|(index, arg)| match arg.as_string_obj(vm).ok().as_deref() {
+                        Some("{self_runtime}") => {
+                            let param =
+                                params
+                                    .get(consumer_param_counter)
+                                    .cloned()
+                                    .unwrap_or_else(|| {
+                                        eprintln!(
+                                    "action runtime defined param cannot be populated (index: {})",
+                                    index
+                                );
+                                        Value::RawValue(RawValue::Nothing)
+                                    });
+                            consumer_param_counter += 1;
+                            param
+                        }
+                        _ => arg.clone(),
+                    })
+                    .collect();
+
                 let execution = vm
-                    .run_function(&f.clone(), Some(_self_ref), _self.args.clone(), debug)
+                    .run_function(&f.clone(), Some(_self_ref), resolved_action_params, debug)
                     .await;
                 if let Some(err) = execution.error {
                     return Err(err);

@@ -68,7 +68,7 @@ You must respond to the following instruction with a list of JSON objects, where
 
 - 'module': the name of the module from the list above,
 - 'member': the specific function name to call (from the members),
-- 'params': an array of arguments.
+- 'params': an array of arguments. If you cannot infer the parameter or the parameter value is dynamic set to {{self_runtime}} string value
 
 You must only use the modules and members listed above. Do not invent anything.
 

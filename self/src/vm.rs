@@ -678,7 +678,7 @@ impl Vm {
                                     }
                                 } else {
                                     return VMExecutionResult::terminate_with_errors(
-                                        VMErrorType::NotCallableError(caller.to_string()),
+                                        VMErrorType::NotCallableError(caller.to_string(self)),
                                         self,
                                     );
                                 }

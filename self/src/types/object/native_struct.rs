@@ -5,6 +5,7 @@ use crate::{
         net::types::{NetServer, NetStream},
     },
     types::Value,
+    vm::Vm,
 };
 
 #[derive(Debug)]
@@ -20,11 +21,11 @@ pub enum NativeStruct {
 }
 
 impl NativeStruct {
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self, vm: &Vm) -> String {
         match self {
             NativeStruct::NetStream(x) => x.to_string(),
             NativeStruct::NetServer(x) => x.to_string(),
-            NativeStruct::Action(x) => x.to_string(),
+            NativeStruct::Action(x) => x.to_string(vm),
             NativeStruct::McpClient(x) => x.to_string(),
             NativeStruct::McpTool(x) => x.to_string(),
         }

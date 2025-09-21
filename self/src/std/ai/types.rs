@@ -4,6 +4,7 @@ use crate::{
         raw::{utf8::Utf8, RawValue},
         Value,
     },
+    vm::Vm,
 };
 
 #[derive(Debug)]
@@ -24,8 +25,19 @@ impl Action {
         }
     }
 
-    pub fn to_string(&self) -> String {
-        format!("Action({}.{})", self.module, self.member)
+    pub fn to_string(&self, vm: &Vm) -> String {
+        format!(
+            r#"Action({}.{}) {{
+  args: [{}]
+}}"#,
+            self.module,
+            self.member,
+            self.args
+                .iter()
+                .map(|v| v.to_string(vm))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 
     pub fn property_access(&self, property: &str) -> Option<Value> {
