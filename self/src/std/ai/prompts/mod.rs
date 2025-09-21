@@ -35,6 +35,31 @@ context: {{ 'arg': {} }}
     );
 }
 
+pub fn resolve_prompt(query: &String) -> String {
+    return format!(
+        "
+Respond to the following query by resolving it to a single value.
+
+Return the result strictly in the following JSON format:
+
+{{
+  \"value\": response-value
+}}
+
+Rules:
+* The response must always contain a single value that directly answers the query.
+* For text values, wrap them in quotes.
+* For numbers, use numeric literals.
+* For boolean answers, use true or false.
+* Do not include explanations, additional text, or multiple values.
+* If the query cannot be reasonably resolved, respond with nothing.
+
+Query: {}
+",
+        query.to_string()
+    );
+}
+
 pub fn do_prompt(stdlib_defs: Vec<String>, request: &String) -> String {
     return format!(
         "You are a virtual machine assistant with access to the following native modules:\n\n{}\n\n

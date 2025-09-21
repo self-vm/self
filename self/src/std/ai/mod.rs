@@ -7,7 +7,7 @@ use crate::{
     memory::MemObject,
     opcodes::DataType,
     std::{
-        ai::members::{do_fn, infer, infer_def},
+        ai::members::{do_fn, infer, infer_def, resolve_def, resolve_obj},
         NativeModuleDef,
     },
     types::object::{
@@ -34,6 +34,7 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     });
 
     fields.push(("infer".to_string(), infer_ref));
+    fields.push(("resolve".to_string(), resolve_obj()));
     fields.push(("do".to_string(), do_ref));
     fields.push(("Engine".to_string(), engine_ref));
 
@@ -41,7 +42,7 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
 }
 
 pub fn generate_mod_def() -> NativeModuleDef {
-    let members = vec![infer_def()];
+    let members = vec![infer_def(), resolve_def()];
 
     NativeModuleDef {
         module: "ai".to_string(),

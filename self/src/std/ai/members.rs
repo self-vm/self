@@ -17,7 +17,7 @@ use crate::{
     memory::{Handle, MemObject},
     std::{
         ai::{
-            prompts::{do_prompt, infer_prompt},
+            prompts::{do_prompt, infer_prompt, resolve_prompt},
             providers::{fetch_ai, ChatResponse},
             types::Action,
         },
@@ -143,6 +143,73 @@ pub fn infer(
     })
 }
 
+// resolve: given a query, resolve to a value
+pub fn resolve_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "resolve".to_string(),
+        vec!["query".to_string()], // TODO: load params to native functions
+        Engine::NativeAsync(resolve),
+    ))
+}
+
+pub fn resolve_def() -> NativeMember {
+    NativeMember {
+        name: "resolve".to_string(),
+        description: "resolve a query into a single output value using AI. eg: url of nike"
+            .to_string(),
+        params: Some(vec!["query(string)".to_string()]),
+    }
+}
+
+pub fn resolve(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> BoxFuture<Result<Value, VMError>> {
+    Box::pin(async move {
+        let query_ref = params[0].clone();
+        let query = query_ref.as_string_obj(vm)?;
+
+        if debug {
+            println!("AI.resolve <- {}", query);
+        }
+
+        // we should try to avoid prompt injection
+        // maybe using multiple prompts?
+        let prompt = resolve_prompt(&query);
+        let res = fetch_ai(prompt).await;
+        let res = match res {
+            Ok(r) => r,
+            Err(vm_err) => {
+                return Err(error::throw(vm_err, vm));
+            }
+        };
+
+        if !res.status().is_success() {
+            return Err(error::throw(
+                VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
+                vm,
+            ));
+        }
+
+        let response: ChatResponse = res.json().await.expect("AI: Failed to parse response");
+        let answer = &response.choices[0].message.content;
+
+        if debug {
+            println!("AI -> {}", answer);
+        }
+
+        let parsed_answer = ai_response_parser(answer);
+        if let Some(v) = parsed_answer {
+            return Ok(v);
+        } else {
+            return Ok(Value::RawValue(RawValue::Nothing));
+        }
+    })
+}
+
+// do
 pub fn do_fn(
     vm: &mut Vm,
     _self: Option<Handle>,
