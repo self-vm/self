@@ -7,6 +7,7 @@ use futures::StreamExt;
 use crate::{
     core::error::{self, net_errors::NetErrors, type_errors::TypeError, VMError, VMErrorType},
     memory::{Handle, MemObject},
+    std::NativeMember,
     types::{
         object::func::{Engine, Function},
         raw::{u32::U32, RawValue},
@@ -14,6 +15,14 @@ use crate::{
     },
     vm::Vm,
 };
+
+pub fn open_def() -> NativeMember {
+    NativeMember {
+        name: "open".to_string(),
+        description: "open the given url in the params and return the html of the site".to_string(),
+        params: Some(vec!["url(string)".to_string()]),
+    }
+}
 
 pub fn open_obj() -> MemObject {
     MemObject::Function(Function::new(

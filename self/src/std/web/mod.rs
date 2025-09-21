@@ -1,5 +1,20 @@
-use crate::{memory::MemObject, std::web::members::open_obj};
+use crate::{
+    memory::MemObject,
+    std::{
+        web::members::{open_def, open_obj},
+        NativeModuleDef,
+    },
+};
 pub mod members;
+
+pub fn generate_mod_def() -> NativeModuleDef {
+    let members = vec![open_def()];
+
+    NativeModuleDef {
+        module: "web".to_string(),
+        members,
+    }
+}
 
 pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     let mut fields = vec![];
