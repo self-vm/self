@@ -5,7 +5,8 @@ mod core;
 
 use commands::Command;
 
-fn main() {
+#[tokio::main(flavor = "multi_thread")]
+async fn main() {
     let command = Command::parse();
-    command.exec();
+    command.exec().await;
 }

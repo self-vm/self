@@ -409,6 +409,7 @@ dependencies = [
  "lazy_static",
  "regex",
  "self-vm",
+ "tokio",
  "wasm-bindgen",
  "web-sys",
 ]

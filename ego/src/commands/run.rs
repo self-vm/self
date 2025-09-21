@@ -19,7 +19,7 @@ impl Run {
     pub fn debug(&self) -> bool {
         self.args.contains(&"-d".to_string())
     }
-    pub fn exec(&self) {
+    pub async fn exec(&self) {
         let module_name = if self.args.len() > 0 {
             self.args[0].clone()
         } else {
@@ -76,7 +76,7 @@ impl Run {
             let mut compiler = Compiler::new(ast);
             let bytecode = compiler.gen_bytecode();
             let mut vm = self_vm::new(bytecode);
-            vm.run(&self.args);
+            vm.run(&self.args).await;
         }
     }
 }

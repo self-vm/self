@@ -50,9 +50,9 @@ impl Command {
             )), // if unknown command, assumes it's a .ego file
         }
     }
-    pub fn exec(&self) {
+    pub async fn exec(&self) {
         match self {
-            Command::Run(v) => v.exec(),
+            Command::Run(v) => v.exec().await,
             Command::Logo(v) => v.exec(),
             Command::New(v) => v.exec(),
             Command::Compile(v) => v.exec(),
