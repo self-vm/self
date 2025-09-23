@@ -1,13 +1,18 @@
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
 use crate::{
-    memory::Handle,
+    memory::{Handle, MemObject},
     types::{
+        object::{native_struct::NativeStruct, structs::StructLiteral, vector::Vector},
         raw::{utf8::Utf8, RawValue},
         Value,
     },
     vm::Vm,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Action {
     pub module: String,
     pub member: String,
@@ -53,4 +58,96 @@ impl Action {
             _ => None,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Link {
+    pub link_def: String,
+    pub link: Action,
+    pub shape: StructLiteral,
+}
+
+impl Link {
+    pub fn new(link_def: String, link: Action) -> Link {
+        Link {
+            link_def,
+            link,
+            shape: StructLiteral::new("Link".to_string(), HashMap::new()),
+        }
+    }
+
+    pub fn to_string(&self, vm: &Vm) -> String {
+        "Link{}".to_string()
+    }
+}
+
+#[derive(Debug)]
+pub struct Chain {
+    pub shape: StructLiteral,
+}
+
+impl Chain {
+    pub fn new_initialized(
+        purpose: String,
+        end_condition: String,
+        chain: Vec<Link>,
+        vm: &mut Vm,
+    ) -> Chain {
+        let mut fields = HashMap::new();
+
+        let purpose_handle = vm.memory.alloc(MemObject::String(purpose));
+        let end_condition_handle = vm.memory.alloc(MemObject::String(end_condition));
+        // chain
+        let mut handles_chain = vec![];
+        for link in chain.iter() {
+            let link_handle = vm
+                .memory
+                .alloc(MemObject::NativeStruct(NativeStruct::Link(link.clone())));
+            handles_chain.push(Value::Handle(link_handle));
+        }
+        let links_handle = vm.memory.alloc(MemObject::Vector(Vector::new_initialized(
+            handles_chain,
+            vm,
+        )));
+
+        // populate fields
+        fields.insert("purpose".to_string(), Value::Handle(purpose_handle));
+        fields.insert(
+            "end_condition".to_string(),
+            Value::Handle(end_condition_handle),
+        );
+        fields.insert("links".to_string(), Value::Handle(links_handle));
+
+        Chain {
+            shape: StructLiteral::new("Chain".to_string(), fields),
+        }
+    }
+
+    pub fn to_string(&self, vm: &Vm) -> String {
+        "Chain{}".to_string()
+    }
+}
+
+// AI json serdes types
+#[derive(Debug, Default, Deserialize, Clone)]
+pub struct AIAction {
+    pub module: String,
+    pub member: String,
+    pub params: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ChainLinkJson {
+    #[serde(default)]
+    pub link_def: String,
+    #[serde(default)]
+    pub link: AIAction,
+    #[serde(default)]
+    pub next_links: Vec<String>,
+    #[serde(default)]
+    pub end: bool,
+    #[serde(default)]
+    pub result: String,
+    #[serde(default)]
+    pub end_condition: String,
 }

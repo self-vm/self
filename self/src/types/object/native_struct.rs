@@ -1,6 +1,6 @@
 use crate::{
     std::{
-        ai::types::Action,
+        ai::types::{Action, Chain, Link},
         mcp::types::{McpClient, McpTool},
         net::types::{NetServer, NetStream},
     },
@@ -15,6 +15,8 @@ pub enum NativeStruct {
     NetStream(NetStream),
     // ai
     Action(Action),
+    Chain(Chain),
+    Link(Link),
     // mcp
     McpClient(McpClient),
     McpTool(McpTool),
@@ -26,6 +28,8 @@ impl NativeStruct {
             NativeStruct::NetStream(x) => x.to_string(),
             NativeStruct::NetServer(x) => x.to_string(),
             NativeStruct::Action(x) => x.to_string(vm),
+            NativeStruct::Chain(x) => x.to_string(vm),
+            NativeStruct::Link(x) => x.to_string(vm),
             NativeStruct::McpClient(x) => x.to_string(),
             NativeStruct::McpTool(x) => x.to_string(),
         }
@@ -39,6 +43,8 @@ impl NativeStruct {
             NativeStruct::NetStream(x) => x.shape.property_access(property),
             NativeStruct::NetServer(x) => x.shape.property_access(property),
             NativeStruct::Action(x) => x.property_access(property),
+            NativeStruct::Chain(x) => x.shape.property_access(property),
+            NativeStruct::Link(x) => x.shape.property_access(property),
             NativeStruct::McpClient(x) => x.shape.property_access(property),
             NativeStruct::McpTool(x) => x.shape.property_access(property),
         }
