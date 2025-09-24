@@ -91,7 +91,7 @@ You must answer a json with the following structure:
 
 {{
    \"link_def\": \"an abstract defining the current link in one sentence\", 
-   \"link\": {{ // current link of the whole thoughts chain
+   \"link_action\": {{ // current link of the whole thoughts chain
          - 'module': the name of the module from the list above,
          - 'member': the specific function name to call (from the members),
          - 'params': an array of arguments. If you cannot infer the parameter or the parameter value is dynamic set to {{self_runtime}} string value   

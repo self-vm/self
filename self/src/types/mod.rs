@@ -47,6 +47,16 @@ impl Value {
         }
     }
 
+    pub fn as_handle(&self) -> Result<Handle, VMError> {
+        match self {
+            Value::Handle(v) => Ok(v.clone()),
+            _ => {
+                // TODO: use self-vm errors system
+                panic!("invalid type to use as_mem_obj struct type")
+            }
+        }
+    }
+
     pub fn as_mem_obj<'vm>(&self, vm: &'vm Vm) -> Result<&'vm MemObject, VMError> {
         match self {
             Value::Handle(v) => Ok(vm.memory.resolve(&v)),

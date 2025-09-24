@@ -492,11 +492,11 @@ pub fn chain(
         let exec_ref = vm.memory.alloc(MemObject::Function(exec_fn));
 
         let link_action = Action::new(
-            chain_link.link.module.clone(),
+            chain_link.link_action.module.clone(),
             exec_ref.clone(),
-            chain_link.link.member.clone(),
+            chain_link.link_action.member.clone(),
             chain_link
-                .link
+                .link_action
                 .params
                 .iter()
                 .map(|p| {
@@ -508,7 +508,7 @@ pub fn chain(
                 })
                 .collect::<Vec<Value>>(),
         );
-        let master_link = Link::new(chain_link.link_def, link_action);
+        let master_link = Link::new_initialized(chain_link.link_def, link_action, vm);
 
         // store all actions ref in a vector and return the
         // vector allocated heap ref

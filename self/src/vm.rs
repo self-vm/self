@@ -405,21 +405,31 @@ impl Vm {
                     Opcode::GetProperty => {
                         let values = self.get_stack_values(&2);
                         let (object_handle, property_handle) = match (&values[0], &values[1]) {
-                            // (Value::HeapRef(obj_ref), Value::HeapRef(prop_ref)) => (
-                            //     self.resolve_heap_ref(obj_ref.clone()),
-                            //     self.resolve_heap_ref(prop_ref.clone()),
-                            // ),
                             (Value::Handle(obj_handle), Value::Handle(prop_handle)) => {
-                                (obj_handle, prop_handle)
+                                (obj_handle.clone(), prop_handle.clone())
+                            }
+                            // nested property acess
+                            (Value::BoundAccess(bound_access), Value::Handle(prop_handle)) => {
+                                let property_handle = match bound_access.property.as_handle() {
+                                    Ok(v) => v.clone(),
+                                    Err(err) => {
+                                        panic!("error on get property on nested levels {:#?}", err);
+                                    }
+                                };
+
+                                (property_handle, prop_handle.clone())
                             }
                             // TODO: use self-vm errors
                             // here we should handle if a function returns an
                             // nothing istead of a struct
-                            _ => panic!("Expected two Handle values for <get_property> opcode"),
+                            _ => {
+                                println!("values: {:#?}", values);
+                                panic!("Expected two Handle values for <get_property> opcode")
+                            }
                         };
 
-                        let object = self.memory.resolve(object_handle);
-                        let property = self.memory.resolve(property_handle);
+                        let object = self.memory.resolve(&object_handle);
+                        let property = self.memory.resolve(&property_handle);
 
                         if debug {
                             println!(

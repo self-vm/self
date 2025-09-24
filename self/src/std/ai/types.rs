@@ -62,17 +62,24 @@ impl Action {
 
 #[derive(Debug, Clone)]
 pub struct Link {
-    pub link_def: String,
-    pub link: Action,
     pub shape: StructLiteral,
+    //   `- action: link action
+    //   `- def: link one sentence definition
 }
 
 impl Link {
-    pub fn new(link_def: String, link: Action) -> Link {
+    pub fn new_initialized(link_def: String, action: Action, vm: &mut Vm) -> Link {
+        let link_def_handle = vm.memory.alloc(MemObject::String(link_def));
+        let action_handle = vm
+            .memory
+            .alloc(MemObject::NativeStruct(NativeStruct::Action(action)));
+
+        let mut fields = HashMap::new();
+        fields.insert("def".to_string(), Value::Handle(link_def_handle));
+        fields.insert("action".to_string(), Value::Handle(action_handle));
+
         Link {
-            link_def,
-            link,
-            shape: StructLiteral::new("Link".to_string(), HashMap::new()),
+            shape: StructLiteral::new("Link".to_string(), fields),
         }
     }
 
@@ -141,7 +148,7 @@ pub struct ChainLinkJson {
     #[serde(default)]
     pub link_def: String,
     #[serde(default)]
-    pub link: AIAction,
+    pub link_action: AIAction,
     #[serde(default)]
     pub next_links: Vec<String>,
     #[serde(default)]
