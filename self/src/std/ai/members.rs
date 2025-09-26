@@ -21,7 +21,7 @@ use crate::{
         ai::{
             prompts::{act_chain_prompt, do_prompt, infer_prompt, resolve_prompt},
             providers::{fetch_ai, ChatResponse},
-            types::{AIAction, Action, Chain, ChainLinkJson, Link},
+            types::{AIAction, Action, Chain, ChainLinkJson, Link, UnfoldStore},
         },
         gen_native_modules_defs, generate_native_module, get_native_module_type,
         utils::cast_json_value,
@@ -439,76 +439,8 @@ pub fn chain(
             println!("AI.CHAIN <- {}", purpose);
         }
 
-        let stdlib_defs: Vec<String> = gen_native_modules_defs()
-            .iter()
-            .map(|nm| nm.to_string())
-            .collect();
-
-        // we should try to avoid prompt injection
-        // maybe using multiple prompts?
-        let prompt = act_chain_prompt(stdlib_defs, &purpose, &end_condition);
-        let res = fetch_ai(prompt).await;
-        let res = match res {
-            Ok(r) => r,
-            Err(vm_err) => {
-                return Err(error::throw(vm_err, vm));
-            }
-        };
-
-        if !res.status().is_success() {
-            println!("AI.CHAIN (FAILED) -> {}", res.status());
-            return Err(error::throw(
-                VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
-                vm,
-            ));
-        }
-
-        let response: ChatResponse = res
-            .json()
-            .await
-            .expect("AI.CHAIN: Failed to parse response");
-        let answer = &response.choices[0].message.content;
-
-        if debug {
-            println!("AI.CHAIN -> {}", answer);
-        }
-
-        let cleaned = get_response_json(answer);
-        let chain_link: ChainLinkJson = if let Ok(val) = serde_json::from_str(cleaned.as_str()) {
-            val
-        } else {
-            return Ok(Value::RawValue(RawValue::Nothing));
-        };
-
-        if debug {
-            println!("AI.CHAIN <- {:#?}", chain_link)
-        }
-
-        // for the moment the function is allocated on
-        // execution. but we should have a way of on a
-        // native module import executed the generic code
-        // to have things on scope, like, exec function.
-        let exec_fn = Function::new("exec".to_string(), vec![], Engine::NativeAsync(exec));
-        let exec_ref = vm.memory.alloc(MemObject::Function(exec_fn));
-
-        let link_action = Action::new(
-            chain_link.link_action.module.clone(),
-            exec_ref.clone(),
-            chain_link.link_action.member.clone(),
-            chain_link
-                .link_action
-                .params
-                .iter()
-                .map(|p| {
-                    if let Some(v) = cast_json_value(p) {
-                        v
-                    } else {
-                        Value::RawValue(RawValue::Nothing)
-                    }
-                })
-                .collect::<Vec<Value>>(),
-        );
-        let master_link = Link::new_initialized(chain_link.link_def, link_action, vm);
+        let master_link =
+            generate_link(&purpose, &end_condition, &UnfoldStore::new(), vm, debug).await?;
 
         // store all actions ref in a vector and return the
         // vector allocated heap ref
@@ -517,5 +449,242 @@ pub fn chain(
             .memory
             .alloc(MemObject::NativeStruct(NativeStruct::Chain(chain)));
         return Ok(Value::Handle(chain_handle));
+    })
+}
+
+pub async fn generate_link(
+    purpose: &String,
+    end_condition: &String,
+    memory: &UnfoldStore,
+    vm: &mut Vm,
+    debug: bool,
+) -> Result<Link, VMError> {
+    let stdlib_defs: Vec<String> = gen_native_modules_defs()
+        .iter()
+        .map(|nm| nm.to_string())
+        .collect();
+
+    // we should try to avoid prompt injection
+    // maybe using multiple prompts?
+    let prompt = act_chain_prompt(
+        stdlib_defs,
+        purpose,
+        end_condition,
+        &memory.prev_links,
+        &memory
+            .context
+            .iter()
+            .map(|v| v.to_string(vm))
+            .collect::<Vec<String>>(),
+    );
+    let res = fetch_ai(prompt).await;
+    let res = match res {
+        Ok(r) => r,
+        Err(vm_err) => {
+            return Err(error::throw(vm_err, vm));
+        }
+    };
+
+    if !res.status().is_success() {
+        println!("AI.CHAIN (FAILED) -> {}", res.status());
+        return Err(error::throw(
+            VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
+            vm,
+        ));
+    }
+
+    let response: ChatResponse = res
+        .json()
+        .await
+        .expect("AI.CHAIN: Failed to parse response");
+    let answer = &response.choices[0].message.content;
+
+    if debug {
+        println!("AI.CHAIN -> {}", answer);
+    }
+
+    let cleaned = get_response_json(answer);
+    let chain_link: ChainLinkJson = if let Ok(val) = serde_json::from_str(cleaned.as_str()) {
+        val
+    } else {
+        // change this to parse error
+        return Err(error::throw(
+            VMErrorType::AI(AIError::AIFetchError("cannot decode response".to_string())),
+            vm,
+        ));
+    };
+
+    if debug {
+        println!("AI.CHAIN <- {:#?}", chain_link)
+    }
+
+    // for the moment the function is allocated on
+    // execution. but we should have a way of on a
+    // native module import executed the generic code
+    // to have things on scope, like, exec function.
+    let exec_fn = Function::new("exec".to_string(), vec![], Engine::NativeAsync(exec));
+    let exec_ref = vm.memory.alloc(MemObject::Function(exec_fn));
+
+    let link_action = Action::new(
+        chain_link.link_action.module.clone(),
+        exec_ref.clone(),
+        chain_link.link_action.member.clone(),
+        chain_link
+            .link_action
+            .params
+            .iter()
+            .map(|p| {
+                if let Some(v) = cast_json_value(p) {
+                    v
+                } else {
+                    Value::RawValue(RawValue::Nothing)
+                }
+            })
+            .collect::<Vec<Value>>(),
+    );
+    return Ok(Link::new_initialized(chain_link.link_def, link_action, vm));
+}
+
+// unfold and traverse a chain links
+pub fn unfold_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "unfold".to_string(),
+        vec!["callback(action)".to_string()], // TODO: load params to native functions
+        Engine::NativeAsync(unfold),
+    ))
+}
+
+pub fn unfold(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> BoxFuture<'_, Result<Value, VMError>> {
+    Box::pin(async move {
+        // resolve 'self'
+        let (_self, _self_ref) = if let Some(_this) = _self {
+            if let MemObject::NativeStruct(NativeStruct::Chain(ch)) = vm.memory.resolve(&_this) {
+                (ch, _this)
+            } else {
+                unreachable!()
+            }
+        } else {
+            unreachable!()
+        };
+
+        // get traverse callback
+        let callback = params[0].as_function_obj(vm)?;
+        if callback.parameters.len() < 1 {
+            return Err(error::throw(
+                VMErrorType::TypeError(TypeError::InvalidArgsCount {
+                    expected: 1,
+                    received: 0,
+                }),
+                vm,
+            ));
+        }
+
+        // get chains
+        let mut links: Vec<Link> = _self
+            .shape
+            .property_access("links")
+            .unwrap_or(Value::RawValue(RawValue::Nothing))
+            .as_vector_obj(vm)?
+            .elements
+            .iter()
+            .map(|v| v.as_native_struct(vm)?.as_link(vm))
+            .collect::<Result<Vec<Link>, VMError>>()?;
+
+        // start chain traversing, here occurs the magic
+        if debug {
+            println!("CHAIN.TRAVERSE <- {}", _self.to_string(vm));
+        }
+
+        // let traversing context
+        let mut memory = UnfoldStore::new();
+        let chain_purpose = _self
+            .shape
+            .property_access("purpose")
+            .unwrap_or(Value::RawValue(RawValue::Nothing))
+            .as_string_obj(vm)?;
+        let chain_end_condition = _self
+            .shape
+            .property_access("end_condition")
+            .unwrap_or(Value::RawValue(RawValue::Nothing))
+            .as_string_obj(vm)?;
+
+        loop {
+            let current_link = links[links.len() - 1].clone();
+            let conclusion = reflect_link(
+                current_link,
+                memory
+                    .context
+                    .last()
+                    .unwrap_or(&Value::RawValue(RawValue::Nothing))
+                    .clone(),
+                vm,
+                debug,
+            )
+            .await?;
+
+            // execute the callback after the action execution
+            // to allow the end of the chain manually
+            let link_handle = vm.memory.alloc(MemObject::NativeStruct(NativeStruct::Link(
+                links[links.len() - 1].clone(),
+            )));
+            let exec_result = vm
+                .run_function(
+                    &callback,
+                    None,
+                    vec![Value::Handle(link_handle), conclusion.clone()],
+                    debug,
+                )
+                .await;
+            if let Some(err) = exec_result.error {
+                return Err(err);
+            }
+
+            // the context should be a store during the whole execution,
+            // something like a hashmap. that has steps, and its conclusions
+            // traverse_context.push(conclusion);
+            // for the moment lets use only each link def
+            memory.context.push(conclusion);
+
+            // generate the next link
+            let next_link =
+                generate_link(&chain_purpose, &chain_end_condition, &memory, vm, debug).await?;
+            links.push(next_link);
+        }
+
+        Ok(Value::RawValue(RawValue::Nothing))
+    })
+}
+
+pub fn reflect_link(
+    link: Link,
+    context: Value,
+    vm: &mut Vm,
+    debug: bool,
+) -> BoxFuture<'_, Result<Value, VMError>> {
+    Box::pin(async move {
+        // execute action
+        // let link_def = current_link
+        //     .shape
+        //     .property_access("def")
+        //     .unwrap_or(Value::RawValue(RawValue::Nothing))
+        //     .as_string_obj(vm)?;
+        let action = link
+            .shape
+            .property_access("action")
+            .unwrap_or(Value::RawValue(RawValue::Nothing))
+            .as_handle()?;
+
+        // here maybe we could handle error on chain execution
+        // step, to have more granularity instead of a generic
+        // function execution error
+        let result = exec(vm, Some(action), vec![context.clone()], debug).await?;
+
+        // return the new context
+        Ok(result)
     })
 }

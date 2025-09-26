@@ -63,9 +63,13 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
             "Type mismatch error".to_string(),
             format!("expected {expected}, received {received}"),
         ),
-        VMErrorType::TypeError(ai) => match ai {
+        VMErrorType::TypeError(v) => match v {
             TypeError::InvalidArgsCount { expected, received } => (
                 "Invalid args count".to_string(),
+                format!("expected {}, received {}", expected, received),
+            ),
+            TypeError::InvalidTypeUnwrap { expected, received } => (
+                "Invalid type unwrap".to_string(),
                 format!("expected {}, received {}", expected, received),
             ),
         },

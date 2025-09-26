@@ -3,7 +3,10 @@ use crate::{
     heap::HeapRef,
     memory::{Handle, MemObject},
     types::{
-        object::{func::Function, structs::StructLiteral, BoundAccess},
+        object::{
+            func::Function, native_struct::NativeStruct, structs::StructLiteral, vector::Vector,
+            BoundAccess,
+        },
         raw::RawValue,
     },
     vm::Vm,
@@ -160,6 +163,102 @@ impl Value {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {
                         expected: "StructLiteral".to_string(),
+                        received: "unknown_type".to_string(),
+                    },
+                    vm,
+                ));
+            }
+        }
+    }
+
+    pub fn as_native_struct<'a>(&self, vm: &'a Vm) -> Result<&'a NativeStruct, VMError> {
+        match self {
+            Value::Handle(r) => {
+                let heap_obj = vm.memory.resolve(&r);
+                let request = match heap_obj {
+                    MemObject::NativeStruct(s) => s,
+                    _ => {
+                        return Err(error::throw(
+                            VMErrorType::TypeMismatch {
+                                expected: "NativeStruct".to_string(),
+                                received: heap_obj.to_string(vm),
+                            },
+                            vm,
+                        ));
+                    }
+                };
+                Ok(request)
+            }
+            Value::RawValue(r) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "NativeStruct".to_string(),
+                        received: r.get_type_string(),
+                    },
+                    vm,
+                ));
+            }
+            Value::BoundAccess(_) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "NativeStruct".to_string(),
+                        received: "bound_access".to_string(),
+                    },
+                    vm,
+                ));
+            }
+            _ => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "NativeStruct".to_string(),
+                        received: "unknown_type".to_string(),
+                    },
+                    vm,
+                ));
+            }
+        }
+    }
+
+    pub fn as_vector_obj(&self, vm: &Vm) -> Result<Vector, VMError> {
+        match self {
+            Value::Handle(r) => {
+                let heap_obj = vm.memory.resolve(&r);
+                let request = match heap_obj {
+                    MemObject::Vector(v) => v,
+                    _ => {
+                        return Err(error::throw(
+                            VMErrorType::TypeMismatch {
+                                expected: "Vector".to_string(),
+                                received: heap_obj.to_string(vm),
+                            },
+                            vm,
+                        ));
+                    }
+                };
+                Ok(request.clone())
+            }
+            Value::RawValue(r) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "Vector".to_string(),
+                        received: r.get_type_string(),
+                    },
+                    vm,
+                ));
+            }
+            Value::BoundAccess(_) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "Vector".to_string(),
+                        received: "bound_access".to_string(),
+                    },
+                    vm,
+                ));
+            }
+            _ => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "Vector".to_string(),
                         received: "unknown_type".to_string(),
                     },
                     vm,

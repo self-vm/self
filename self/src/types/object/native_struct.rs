@@ -1,4 +1,5 @@
 use crate::{
+    core::error::{self, type_errors, VMError, VMErrorType},
     std::{
         ai::types::{Action, Chain, Link},
         mcp::types::{McpClient, McpTool},
@@ -47,6 +48,32 @@ impl NativeStruct {
             NativeStruct::Link(x) => x.shape.property_access(property),
             NativeStruct::McpClient(x) => x.shape.property_access(property),
             NativeStruct::McpTool(x) => x.shape.property_access(property),
+        }
+    }
+
+    pub fn as_link(&self, vm: &Vm) -> Result<Link, VMError> {
+        match self {
+            NativeStruct::Link(x) => Ok(x.clone()),
+            _ => Err(error::throw(
+                VMErrorType::TypeError(type_errors::TypeError::InvalidTypeUnwrap {
+                    expected: "Link".to_string(),
+                    received: self.to_string(vm),
+                }),
+                vm,
+            )),
+        }
+    }
+
+    pub fn as_action(&self, vm: &Vm) -> Result<Action, VMError> {
+        match self {
+            NativeStruct::Action(x) => Ok(x.clone()),
+            _ => Err(error::throw(
+                VMErrorType::TypeError(type_errors::TypeError::InvalidTypeUnwrap {
+                    expected: "Link".to_string(),
+                    received: self.to_string(vm),
+                }),
+                vm,
+            )),
         }
     }
 }

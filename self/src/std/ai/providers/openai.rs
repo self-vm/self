@@ -22,7 +22,7 @@ pub async fn fetch(prompt: String) -> Response {
         .json(&request_body)
         .send()
         .await
-        .expect("AI: Failed to send request");
+        .expect("AI: Failed to send request"); // handle no network timeout here
 
     res
 }

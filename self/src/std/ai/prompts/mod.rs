@@ -80,7 +80,13 @@ Instruction: {}",
     );
 }
 
-pub fn act_chain_prompt(stdlib_defs: Vec<String>, purpose: &String, end_condition: &String) -> String {
+pub fn act_chain_prompt(
+    stdlib_defs: Vec<String>,
+    purpose: &String,
+    end_condition: &String,
+    prev_links: &Vec<String>,
+    context: &Vec<String>,
+) -> String {
     return format!(
         "
 You are a virtual machine orchestrator that given a purpose and an end condition will act with a chain of thoughts using the following native modules until the end condition mets. You have access to the following native modules to act:
@@ -112,9 +118,20 @@ if the chain end condition is met, answer a json with this structure: {{
     }}
 
 Instruction: {}
-End condition: {}",
+End condition: {}
+
+Previous executed links definitions: 
+
+{}
+
+Available context of the actual chain: 
+
+{}
+",
         stdlib_defs.join("\n\n"),
-        purpose, 
-        end_condition
+        purpose,
+        end_condition,
+        prev_links.join("\n"),
+        context.join("\n"),
     );
 }

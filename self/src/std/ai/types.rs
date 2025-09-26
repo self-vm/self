@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     memory::{Handle, MemObject},
+    std::ai::members::unfold_obj,
     types::{
         object::{native_struct::NativeStruct, structs::StructLiteral, vector::Vector},
         raw::{utf8::Utf8, RawValue},
@@ -104,6 +105,8 @@ impl Chain {
 
         let purpose_handle = vm.memory.alloc(MemObject::String(purpose));
         let end_condition_handle = vm.memory.alloc(MemObject::String(end_condition));
+        let unfold_handle = vm.memory.alloc(unfold_obj());
+
         // chain
         let mut handles_chain = vec![];
         for link in chain.iter() {
@@ -124,6 +127,7 @@ impl Chain {
             Value::Handle(end_condition_handle),
         );
         fields.insert("links".to_string(), Value::Handle(links_handle));
+        fields.insert("unfold".to_string(), Value::Handle(unfold_handle));
 
         Chain {
             shape: StructLiteral::new("Chain".to_string(), fields),
@@ -132,6 +136,20 @@ impl Chain {
 
     pub fn to_string(&self, vm: &Vm) -> String {
         "Chain{}".to_string()
+    }
+}
+
+pub struct UnfoldStore {
+    pub prev_links: Vec<String>,
+    pub context: Vec<Value>,
+}
+
+impl UnfoldStore {
+    pub fn new() -> UnfoldStore {
+        UnfoldStore {
+            prev_links: vec![],
+            context: vec![],
+        }
     }
 }
 
