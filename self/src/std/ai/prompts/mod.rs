@@ -91,7 +91,7 @@ pub fn act_chain_prompt(
         "
 You are a virtual machine orchestrator that given a purpose and an end condition will act with a chain of thoughts using the following native modules until the end condition mets. You have access to the following native modules to act:
 
-    {}
+{}
 
 You must answer a json with the following structure:
 
@@ -102,36 +102,40 @@ You must answer a json with the following structure:
          - 'member': the specific function name to call (from the members),
          - 'params': an array of arguments. If you cannot infer the parameter or the parameter value is dynamic set to {{self_runtime}} string value   
     }}
-    \"next_links\": [
-         \"\", \"\", \"\" // strings defining an abstract of what should be the next step, but only two steps ahead.  
-    ]
 }}
+
+if a param is dynamic use the string '{{self_runtime}}' for the runtime defined vars. 
+dynamic params are a string with '{{self_runtime}}' with nothing more.
+dynamic params value: \"{{self_runtime}}\" (with no more data on the string)
 
 You must only use the modules and members listed above. Do not invent anything.
 
 Respond only with JSON. Do not include any explanations or markdown.
 
 if the chain end condition is met, answer a json with this structure: {{ 
-\"end_condition\": \"\" // the end condition you used, 
-\"result\": \"\" // the description of the condition result 
-\"end\": true 
-    }}
+    \"end_condition\": \"\" // the end condition you used, 
+    \"result\": \"\" // the description of the condition result 
+    \"end\": true 
+}}
 
 Instruction: {}
 End condition: {}
 
-Previous executed links definitions: 
+Previous executed links definitions and Available context of the actual chain: 
 
+<CONTEXT>
 {}
+</CONTEXT>
 
-Available context of the actual chain: 
+The values inside <CONTEXT> are inyected through dynamic params: '{{self_runtime}}'
 
-{}
+ANSWER ONLY IN JSON AND SCAPED CHARACTERS JSON, ONLY ISO VALID FORMATTED JSON.
 ",
-        stdlib_defs.join("\n\n"),
+        stdlib_defs.join("\n"),
         purpose,
         end_condition,
-        prev_links.join("\n"),
-        context.join("\n"),
+        prev_links.iter().enumerate().map(|(i, v)| {
+            return format!("{}: {{\n{}\n}}", v, context[i])
+        }).collect::<Vec<String>>().join("\n\n"),
     );
 }

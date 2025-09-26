@@ -118,6 +118,9 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
             AIError::AIEngineNotImplemented(s) => {
                 ("AI engine not implemented".to_string(), format!("{}", s))
             }
+            AIError::AIActionForcedAbort(s) => {
+                ("AI action forced abort".to_string(), format!("{}", s))
+            }
         },
         VMErrorType::Action(a) => match a {
             ActionError::InvalidModule(s) => (

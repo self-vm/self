@@ -12,9 +12,12 @@ use futures::future::BoxFuture;
 use serde_json::Value as SValue;
 
 use crate::{
-    core::error::{
-        self, action_errors::ActionError, ai_errors::AIError, type_errors::TypeError, VMError,
-        VMErrorType,
+    core::{
+        error::{
+            self, action_errors::ActionError, ai_errors::AIError, type_errors::TypeError, VMError,
+            VMErrorType,
+        },
+        logs::write_log,
     },
     memory::{Handle, MemObject},
     std::{
@@ -360,9 +363,9 @@ pub fn exec(
                     .iter()
                     .enumerate()
                     .map(|(index, arg)| match arg.as_string_obj(vm).ok().as_deref() {
-                        Some("{self_runtime}") => {
-                            let param =
-                                params
+                        Some(v) => {
+                            if v.contains("{self_runtime}") {
+                                let param = params
                                     .get(consumer_param_counter)
                                     .cloned()
                                     .unwrap_or_else(|| {
@@ -372,8 +375,11 @@ pub fn exec(
                                 );
                                         Value::RawValue(RawValue::Nothing)
                                     });
-                            consumer_param_counter += 1;
-                            param
+                                consumer_param_counter += 1;
+                                param
+                            } else {
+                                arg.clone()
+                            }
                         }
                         _ => arg.clone(),
                     })
@@ -477,6 +483,10 @@ pub async fn generate_link(
             .map(|v| v.to_string(vm))
             .collect::<Vec<String>>(),
     );
+
+    if debug {
+        write_log("PROMPT", &prompt);
+    }
     let res = fetch_ai(prompt).await;
     let res = match res {
         Ok(r) => r,
@@ -504,6 +514,7 @@ pub async fn generate_link(
     }
 
     let cleaned = get_response_json(answer);
+    println!("{}", cleaned);
     let chain_link: ChainLinkJson = if let Ok(val) = serde_json::from_str(cleaned.as_str()) {
         val
     } else {
@@ -542,7 +553,14 @@ pub async fn generate_link(
             })
             .collect::<Vec<Value>>(),
     );
-    return Ok(Link::new_initialized(chain_link.link_def, link_action, vm));
+    return Ok(Link::new_initialized(
+        chain_link.link_def,
+        link_action,
+        chain_link.end,
+        chain_link.end_condition,
+        chain_link.result,
+        vm,
+    ));
 }
 
 // unfold and traverse a chain links
@@ -614,7 +632,53 @@ pub fn unfold(
             .as_string_obj(vm)?;
 
         loop {
+            // if current link is end link
+            // break the loop
             let current_link = links[links.len() - 1].clone();
+            let is_end = current_link
+                .shape
+                .property_access("is_end")
+                .unwrap_or(Value::RawValue(RawValue::Nothing))
+                .as_bool(vm)?;
+
+            if is_end {
+                break;
+            }
+
+            // check if the user, want to allow the action before
+            // performing. execute the callback before the action execution
+            // to allow the end of the chain manually based on some heuristics
+            let link_handle = vm.memory.alloc(MemObject::NativeStruct(NativeStruct::Link(
+                links[links.len() - 1].clone(),
+            )));
+            let exec_result = vm
+                .run_function(&callback, None, vec![Value::Handle(link_handle)], debug)
+                .await;
+            if let Some(err) = exec_result.error {
+                return Err(err);
+            }
+
+            if let Some(r) = exec_result.result {
+                let v = r.as_bool(vm)?;
+                if !v {
+                    // if callback execution is false, means to not execute the action
+                    return Ok(Value::RawValue(RawValue::Bool(Bool::new(false))));
+                }
+            } else {
+                return Err(error::throw(
+                    VMErrorType::AI(AIError::AIActionForcedAbort(
+                        "chain callback must return a boolean type. true for action exeuction false for aborting.".to_string(),
+                    )),
+                    vm,
+                ));
+            }
+
+            // process the current link
+            let current_def = current_link
+                .shape
+                .property_access("def")
+                .unwrap_or(Value::RawValue(RawValue::Nothing))
+                .as_string_obj(vm)?;
             let conclusion = reflect_link(
                 current_link,
                 memory
@@ -627,32 +691,26 @@ pub fn unfold(
             )
             .await?;
 
-            // execute the callback after the action execution
-            // to allow the end of the chain manually
-            let link_handle = vm.memory.alloc(MemObject::NativeStruct(NativeStruct::Link(
-                links[links.len() - 1].clone(),
-            )));
-            let exec_result = vm
-                .run_function(
-                    &callback,
-                    None,
-                    vec![Value::Handle(link_handle), conclusion.clone()],
-                    debug,
-                )
-                .await;
-            if let Some(err) = exec_result.error {
-                return Err(err);
-            }
-
             // the context should be a store during the whole execution,
             // something like a hashmap. that has steps, and its conclusions
             // traverse_context.push(conclusion);
             // for the moment lets use only each link def
+            memory.prev_links.push(current_def);
             memory.context.push(conclusion);
 
             // generate the next link
             let next_link =
                 generate_link(&chain_purpose, &chain_end_condition, &memory, vm, debug).await?;
+            if debug {
+                write_log(
+                    "THOUGHT",
+                    &next_link
+                        .shape
+                        .property_access("def")
+                        .unwrap_or(Value::RawValue(RawValue::Nothing))
+                        .as_string_obj(vm)?,
+                );
+            }
             links.push(next_link);
         }
 

@@ -1086,15 +1086,19 @@ impl Vm {
                             },
                         ))
                     }
-                    (RawValue::Utf8(_), RawValue::Utf8(_)) => {
-                        return Some(VMErrorType::InvalidBinaryOperation(
-                            InvalidBinaryOperation {
-                                left: DataType::Utf8,
-                                right: DataType::Utf8,
-                                operator: operator.to_string(),
-                            },
-                        ))
-                    }
+                    (RawValue::Utf8(l), RawValue::Utf8(r)) => match operator {
+                        "==" => RawValue::Bool(Bool::new(l.value == r.value)),
+                        "!=" => RawValue::Bool(Bool::new(l.value != r.value)),
+                        _ => {
+                            return Some(VMErrorType::InvalidBinaryOperation(
+                                InvalidBinaryOperation {
+                                    left: DataType::Utf8,
+                                    right: DataType::Utf8,
+                                    operator: operator.to_string(),
+                                },
+                            ))
+                        }
+                    },
                     (RawValue::Bool(_), RawValue::Bool(_)) => {
                         return Some(VMErrorType::InvalidBinaryOperation(
                             InvalidBinaryOperation {
@@ -1120,8 +1124,14 @@ impl Vm {
                         match operator {
                             "+" => {
                                 let result_string = format!("{left_string}{right_string}");
-                                self.memory.alloc(MemObject::String(result_string))
+                                Value::Handle(self.memory.alloc(MemObject::String(result_string)))
                             }
+                            "==" => Value::RawValue(RawValue::Bool(Bool::new(
+                                left_string == right_string,
+                            ))),
+                            "!=" => Value::RawValue(RawValue::Bool(Bool::new(
+                                left_string == right_string,
+                            ))),
                             _ => {
                                 return Some(VMErrorType::InvalidBinaryOperation(
                                     InvalidBinaryOperation {
@@ -1147,7 +1157,7 @@ impl Vm {
                     }
                 };
 
-                value = Value::Handle(result_value);
+                value = result_value;
             }
             (Value::Handle(_), Value::RawValue(_)) => {
                 return Some(VMErrorType::TypeCoercionError(right))

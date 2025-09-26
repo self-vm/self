@@ -7,7 +7,7 @@ use crate::{
     std::ai::members::unfold_obj,
     types::{
         object::{native_struct::NativeStruct, structs::StructLiteral, vector::Vector},
-        raw::{utf8::Utf8, RawValue},
+        raw::{bool::Bool, utf8::Utf8, RawValue},
         Value,
     },
     vm::Vm,
@@ -66,11 +66,23 @@ pub struct Link {
     pub shape: StructLiteral,
     //   `- action: link action
     //   `- def: link one sentence definition
+    //   `- is_end: link one sentence definition
+    //   `- end_condition: link one sentence definition
+    //   `- result: link one sentence definition
 }
 
 impl Link {
-    pub fn new_initialized(link_def: String, action: Action, vm: &mut Vm) -> Link {
+    pub fn new_initialized(
+        link_def: String,
+        action: Action,
+        is_end: bool,
+        end_condition: String,
+        result: String,
+        vm: &mut Vm,
+    ) -> Link {
         let link_def_handle = vm.memory.alloc(MemObject::String(link_def));
+        let end_condition_handle = vm.memory.alloc(MemObject::String(end_condition));
+        let result_handle = vm.memory.alloc(MemObject::String(result));
         let action_handle = vm
             .memory
             .alloc(MemObject::NativeStruct(NativeStruct::Action(action)));
@@ -78,6 +90,15 @@ impl Link {
         let mut fields = HashMap::new();
         fields.insert("def".to_string(), Value::Handle(link_def_handle));
         fields.insert("action".to_string(), Value::Handle(action_handle));
+        fields.insert(
+            "end_condition".to_string(),
+            Value::Handle(end_condition_handle),
+        );
+        fields.insert("result".to_string(), Value::Handle(result_handle));
+        fields.insert(
+            "is_end".to_string(),
+            Value::RawValue(RawValue::Bool(Bool::new(is_end))),
+        );
 
         Link {
             shape: StructLiteral::new("Link".to_string(), fields),
@@ -167,8 +188,6 @@ pub struct ChainLinkJson {
     pub link_def: String,
     #[serde(default)]
     pub link_action: AIAction,
-    #[serde(default)]
-    pub next_links: Vec<String>,
     #[serde(default)]
     pub end: bool,
     #[serde(default)]
