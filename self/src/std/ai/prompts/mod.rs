@@ -115,7 +115,7 @@ Respond only with JSON. Do not include any explanations or markdown.
 if the chain end condition is met, answer a json with this structure: {{ 
     \"end_condition\": \"\" // the end condition you used, 
     \"result\": \"\" // the description of the condition result 
-    \"end\": true 
+    \"end\": true //if end condition is met, DO NOT include link_def or link_action.
 }}
 
 Instruction: {}
@@ -129,7 +129,7 @@ Previous executed links definitions and Available context of the actual chain:
 
 The values inside <CONTEXT> are inyected through dynamic params: '{{self_runtime}}'
 
-ANSWER ONLY IN JSON AND SCAPED CHARACTERS JSON, ONLY ISO VALID FORMATTED JSON.
+ANSWER ONLY IN JSON, ONLY ISO 8259 VALID FORMATTED JSON.
 ",
         stdlib_defs.join("\n"),
         purpose,
