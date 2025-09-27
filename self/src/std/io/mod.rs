@@ -2,7 +2,10 @@ mod members;
 
 use crate::{
     memory::MemObject,
-    std::{io::members::read_line_obj, NativeModuleDef},
+    std::{
+        io::members::{read_line_def, read_line_obj},
+        NativeModuleDef,
+    },
 };
 
 pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
@@ -14,7 +17,7 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
 }
 
 pub fn generate_mod_def() -> NativeModuleDef {
-    let members = vec![];
+    let members = vec![read_line_def()];
 
     NativeModuleDef {
         module: "io".to_string(),

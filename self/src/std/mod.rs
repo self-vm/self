@@ -117,5 +117,6 @@ pub fn gen_native_modules_defs() -> Vec<NativeModuleDef> {
         fs::generate_mod_def(),
         ai::generate_mod_def(),
         web::generate_mod_def(),
+        io::generate_mod_def(),
     ];
 }
