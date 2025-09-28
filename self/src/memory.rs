@@ -15,7 +15,7 @@ use crate::{
 #[derive(Debug)]
 pub struct MemoryManager {
     heap: Heap,
-    table: HashMap<u32, PointerType>,
+    table: HashMap<u32, Entry>,
     next_pointer: u32,
 }
 
@@ -67,7 +67,7 @@ impl MemoryManager {
     pub fn resolve(&self, handle: &Handle) -> &MemObject {
         let real_pointer = self.table.get(&handle.pointer);
         if let Some(rp) = real_pointer {
-            match rp {
+            match &rp.ptr {
                 PointerType::HeapPointer(p) => match self.heap.get(p.clone()) {
                     Some(v) => v,
                     None => panic!("handle pointer does not exist in memory table"),
@@ -81,7 +81,7 @@ impl MemoryManager {
     pub fn resolve_mut(&mut self, handle: &Handle) -> &mut MemObject {
         let real_pointer = self.table.get(&handle.pointer);
         if let Some(rp) = real_pointer {
-            match rp {
+            match &rp.ptr {
                 PointerType::HeapPointer(p) => match self.heap.get_mut(p.clone()) {
                     Some(v) => v,
                     None => panic!("handle pointer does not exist in memory table"),
@@ -96,7 +96,7 @@ impl MemoryManager {
         let generated_pointer = self.next_pointer;
         self.next_pointer += 1;
         let handle = Handle::new(generated_pointer);
-        self.table.insert(generated_pointer, pointer);
+        self.table.insert(generated_pointer, Entry::new(pointer));
         handle
     }
 
@@ -106,7 +106,7 @@ impl MemoryManager {
             panic!("unset pointer exception")
         }
 
-        (handle.pointer, val.unwrap().clone())
+        (handle.pointer, val.unwrap().ptr.clone())
     }
 }
 
@@ -127,6 +127,18 @@ impl Handle {
     }
 }
 
+#[derive(Debug, Clone)]
+struct Entry {
+    ptr: PointerType,
+    rc: u32,
+}
+
+impl Entry {
+    pub fn new(ptr: PointerType) -> Entry {
+        Entry { ptr, rc: 1 }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum PointerType {
     HeapPointer(HeapRef),
@@ -141,6 +153,7 @@ impl PointerType {
     }
 }
 
+// STORED OBJECTS ON THE MEMORY
 #[derive(Debug)]
 pub enum MemObject {
     String(String),
