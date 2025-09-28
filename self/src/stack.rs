@@ -42,7 +42,7 @@ impl CallStack {
 #[derive(Debug)]
 pub struct StackFrame {
     return_pc: usize,
-    symbols: HashMap<String, Value>,
+    pub symbols: HashMap<String, Value>,
     exports: Vec<String>,
 }
 

@@ -42,7 +42,7 @@ impl MemoryManager {
         }
     }
 
-    pub fn free(&mut self, handle: Handle) -> MemObject {
+    pub fn free(&mut self, handle: &Handle) -> MemObject {
         let mem_obj = self.resolve(&handle);
         match mem_obj {
             // heap objects
@@ -104,6 +104,21 @@ impl MemoryManager {
         }
     }
 
+    pub fn release(&mut self, handle: &Handle) -> Result<(), VMErrorType> {
+        let real_pointer = self.table.get_mut(&handle.pointer);
+        if let Some(rp) = real_pointer {
+            if rp.rc_decrement() < 1 {
+                self.free(handle);
+                self.table.remove_entry(&handle.pointer);
+            };
+            Ok(())
+        } else {
+            Err(VMErrorType::Memory(MemoryError::InvalidHandle(
+                handle.pointer,
+            )))
+        }
+    }
+
     fn gen_handle(&mut self, pointer: PointerType) -> Handle {
         let generated_pointer = self.next_pointer;
         self.next_pointer += 1;
@@ -151,6 +166,10 @@ impl Entry {
     }
     pub fn rc_increment(&mut self) {
         self.rc += 1;
+    }
+    pub fn rc_decrement(&mut self) -> u32 {
+        self.rc -= 1;
+        self.rc
     }
 }
 

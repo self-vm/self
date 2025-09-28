@@ -164,6 +164,16 @@ impl Vm {
                         let identifier_name = String::from_utf8(identifier_bytes)
                             .expect("Identifier bytes should be valid UTF-8");
 
+                        // release the handle if we are going to reassign
+                        if let Some(i) = self.call_stack.resolve(&identifier_name) {
+                            if let Value::Handle(h) = i {
+                                let release_result = self.memory.release(&h);
+                                if let Err(err) = release_result {
+                                    return VMExecutionResult::terminate_with_errors(err, self);
+                                }
+                            }
+                        }
+
                         // execution
                         let stack_stored_value = self.operand_stack.pop();
                         if let Some(v) = stack_stored_value {
@@ -198,7 +208,6 @@ impl Vm {
                             panic!("STACK UNDERFLOW")
                         }
 
-                        println!("{:#?}", self.memory);
                         self.pc += 1;
                     }
                     Opcode::JumpIfFalse => {
@@ -533,10 +542,6 @@ impl Vm {
                             (&MemObject, Handle),
                             Option<Handle>,
                         ) = match callee_value[0].clone() {
-                            // Value::HeapRef(_ref) => {
-                            //     let owned_ref = _ref.clone();
-                            //     ((self.resolve_heap_ref(_ref), owned_ref), None)
-                            // }
                             Value::Handle(handle) => ((self.memory.resolve(&handle), handle), None),
                             Value::BoundAccess(b) => {
                                 if let Value::Handle(callee_handle) = b.property.as_ref() {
@@ -840,6 +845,12 @@ impl Vm {
                     }
                     Opcode::Return => {
                         let return_value = self.get_stack_values(&1)[0].clone();
+                        if let Value::Handle(h) = &return_value {
+                            let result = self.memory.retain(&h);
+                            if let Err(err) = result {
+                                return VMExecutionResult::terminate_with_errors(err, self);
+                            }
+                        }
                         return VMExecutionResult::terminate(Some(return_value));
                     }
                     Opcode::Add => {
@@ -1243,8 +1254,16 @@ impl Vm {
                 self.pc = 0;
 
                 let function_exec_result = self.run_bytecode(debug).await;
-                // recover state after execution
-                self.call_stack.pop();
+
+                // release frame after function execution
+                let frame = self.call_stack.pop();
+                if let Some(f) = frame {
+                    for (_, value) in f.symbols {
+                        if let Value::Handle(h) = value {
+                            let _ = self.memory.release(&h);
+                        }
+                    }
+                }
                 self.pc = return_pc;
                 self.bytecode = main_bytecode;
 
@@ -1464,7 +1483,7 @@ impl Vm {
                     // and they are a heap allocated value, but there is also infra to
                     // storing strings in the stack and not in the heap
                     if let Value::Handle(field_handle) = field_name_handle {
-                        let field_name = self.memory.free(field_handle);
+                        let field_name = self.memory.free(&field_handle);
                         if let MemObject::String(field_name) = field_name {
                             // add field with it's value to StructLiteral fields
                             fields.insert(field_name, field_value);
