@@ -1,6 +1,7 @@
 pub mod action_errors;
 pub mod ai_errors;
 pub mod fs_errors;
+pub mod memory_errors;
 pub mod net_errors;
 pub mod os_errors;
 pub mod struct_errors;
@@ -8,8 +9,9 @@ pub mod type_errors;
 
 use crate::{
     core::error::{
-        action_errors::ActionError, ai_errors::AIError, fs_errors::FsError, net_errors::NetErrors,
-        os_errors::OsError, struct_errors::StructError, type_errors::TypeError,
+        action_errors::ActionError, ai_errors::AIError, fs_errors::FsError,
+        memory_errors::MemoryError, net_errors::NetErrors, os_errors::OsError,
+        struct_errors::StructError, type_errors::TypeError,
     },
     opcodes::DataType,
     stack::OperandsStackValue,
@@ -33,6 +35,7 @@ pub enum VMErrorType {
     Action(ActionError),
     Net(NetErrors),
     Struct(StructError),
+    Memory(MemoryError),
     Any(String),
 }
 
@@ -45,6 +48,12 @@ pub struct VMError {
 
 pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
     let error = match &error_type {
+        VMErrorType::Memory(v) => match v {
+            MemoryError::InvalidHandle(v) => (
+                "Invalid handle".to_string(),
+                format!("handle with id '{}'", v),
+            ),
+        },
         VMErrorType::TypeCoercionError(v) => {
             let source = if let Some(origin) = &v.origin {
                 origin

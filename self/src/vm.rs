@@ -169,8 +169,21 @@ impl Vm {
                         if let Some(v) = stack_stored_value {
                             let datatype = v.value.get_type();
                             let printable_value = v.value.to_string(self);
-                            self.call_stack
-                                .put_to_frame(identifier_name.clone(), v.value);
+                            match &v.value {
+                                Value::Handle(h) => {
+                                    let result = self.memory.retain(&h);
+                                    if let Err(err) = result {
+                                        return VMExecutionResult::terminate_with_errors(err, self);
+                                    }
+                                    self.call_stack
+                                        .put_to_frame(identifier_name.clone(), v.value.clone());
+                                }
+                                _ => {
+                                    self.call_stack
+                                        .put_to_frame(identifier_name.clone(), v.value);
+                                }
+                            }
+
                             if debug {
                                 println!(
                                     "STORE_VAR[{}] <- {:?}({}) as {}",
@@ -185,6 +198,7 @@ impl Vm {
                             panic!("STACK UNDERFLOW")
                         }
 
+                        println!("{:#?}", self.memory);
                         self.pc += 1;
                     }
                     Opcode::JumpIfFalse => {

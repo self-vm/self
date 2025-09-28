@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    core::error::{self, VMError},
+    core::error::{self, memory_errors::MemoryError, VMError, VMErrorType},
     heap::{Heap, HeapRef},
     types::object::{
         func::Function,
@@ -92,6 +92,18 @@ impl MemoryManager {
         }
     }
 
+    pub fn retain(&mut self, handle: &Handle) -> Result<(), VMErrorType> {
+        let real_pointer = self.table.get_mut(&handle.pointer);
+        if let Some(rp) = real_pointer {
+            rp.rc_increment();
+            Ok(())
+        } else {
+            Err(VMErrorType::Memory(MemoryError::InvalidHandle(
+                handle.pointer,
+            )))
+        }
+    }
+
     fn gen_handle(&mut self, pointer: PointerType) -> Handle {
         let generated_pointer = self.next_pointer;
         self.next_pointer += 1;
@@ -135,7 +147,10 @@ struct Entry {
 
 impl Entry {
     pub fn new(ptr: PointerType) -> Entry {
-        Entry { ptr, rc: 1 }
+        Entry { ptr, rc: 0 }
+    }
+    pub fn rc_increment(&mut self) {
+        self.rc += 1;
     }
 }
 
