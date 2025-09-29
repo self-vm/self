@@ -7,4 +7,5 @@ custom.toml
 wforeigns
 .env
 !LICENSE.txt
+!README.txt
 out
