@@ -257,10 +257,10 @@ impl Compiler {
     fn compile_expression(node: &Expression, drop_value: bool) -> Vec<u8> {
         // all expressions push a load_const opcode
         // except of identifier which loads a load_var opcode
+        let mut bytecode = vec![];
+
         match node {
             Expression::LambdaExpression(v) => {
-                let mut bytecode = vec![];
-
                 // load function args num/type/...
                 let parameters: Vec<String> = v
                     .parameters
@@ -303,23 +303,19 @@ impl Compiler {
 
                 bytecode.extend_from_slice(&Compiler::compile_offset(body_bytecode_length));
                 bytecode.extend_from_slice(&body_bytecode);
-
-                bytecode
             }
             Expression::CallExpression(v) => {
                 let call_expression_bytecode = match v.get_callee().as_str() {
                     "print" => handlers::print_as_bytecode(v),
                     "println" => handlers::print_as_bytecode(v), // both print types can be handled by the same function
                     "call" => handlers::call_as_bytecode(v),
-                    "ai" => handlers::function_call_as_bytecode(v, drop_value),
-                    _ => handlers::function_call_as_bytecode(v, drop_value),
+                    "ai" => handlers::function_call_as_bytecode(v),
+                    _ => handlers::function_call_as_bytecode(v),
                 };
 
-                call_expression_bytecode
+                bytecode.extend_from_slice(&call_expression_bytecode);
             }
             Expression::StructLiteral(v) => {
-                let mut bytecode = vec![];
-
                 // first, load field values onto the stack
                 let (fields_num, object_literal_bytecode) =
                     &Compiler::compile_object_literal(&v.fields);
@@ -349,12 +345,8 @@ impl Compiler {
 
                 // compile object fields number
                 bytecode.extend_from_slice(&Compiler::compile_offset(*fields_num as i32));
-
-                bytecode
             }
             Expression::ObjectLiteral(v) => {
-                let mut bytecode = vec![];
-
                 // first, load field values onto the stack
                 let (fields_num, object_literal_bytecode) = &Compiler::compile_object_literal(&v);
                 bytecode.extend_from_slice(&object_literal_bytecode);
@@ -377,11 +369,8 @@ impl Compiler {
 
                 // compile object fields number
                 bytecode.extend_from_slice(&Compiler::compile_offset(*fields_num as i32));
-
-                bytecode
             }
             Expression::Vector(v) => {
-                let mut bytecode = vec![];
                 let elements_num = v.children.len();
 
                 for child in &v.children {
@@ -392,11 +381,8 @@ impl Compiler {
                 bytecode.push(get_bytecode("load_const".to_string()));
                 bytecode.push(get_bytecode("vector".to_string()));
                 bytecode.extend_from_slice(&Compiler::compile_offset(elements_num as i32));
-
-                bytecode
             }
             Expression::Number(v) => {
-                let mut bytecode = vec![];
                 bytecode.push(get_bytecode("load_const".to_string()));
 
                 // if v.value.is_sign_negative() {
@@ -427,10 +413,8 @@ impl Compiler {
 
                 // value
                 bytecode.extend_from_slice(&num_bytecode);
-                bytecode
             }
             Expression::StringLiteral(v) => {
-                let mut bytecode = vec![];
                 bytecode.push(get_bytecode("load_const".to_string()));
 
                 // todo: handle larger string
@@ -441,10 +425,8 @@ impl Compiler {
                 bytecode.push(get_bytecode("u32".to_string()));
                 bytecode.extend_from_slice(&string_length.to_le_bytes());
                 bytecode.extend_from_slice(string_bytes);
-                bytecode
             }
             Expression::Bool(v) => {
-                let mut bytecode = vec![];
                 bytecode.push(get_bytecode("load_const".to_string()));
                 bytecode.push(get_bytecode("bool".to_string()));
                 if v.value {
@@ -452,20 +434,14 @@ impl Compiler {
                 } else {
                     bytecode.push(0x00);
                 };
-
-                bytecode
             }
             Expression::Identifier(v) => {
-                let mut bytecode = vec![];
                 bytecode.push(get_bytecode("load_var".to_string()));
 
                 let identifier_bytecode = Compiler::compile_raw_string(v.name.clone());
                 bytecode.extend_from_slice(&identifier_bytecode);
-                bytecode
             }
             Expression::BinaryExpression(v) => {
-                let mut bytecode = vec![];
-
                 // operands
                 let left_operand = *v.left.clone();
                 let right_operand = *v.right.clone();
@@ -484,11 +460,8 @@ impl Compiler {
                     "!=" => bytecode.push(get_bytecode("not_equals".to_string())),
                     _ => {}
                 };
-
-                bytecode
             }
             Expression::MemberExpression(v) => {
-                let mut bytecode = vec![];
                 let property = v.property.clone();
                 let object = v.object.clone();
 
@@ -508,19 +481,20 @@ impl Compiler {
                 bytecode.extend_from_slice(&object_bytecode);
                 bytecode.extend_from_slice(&property_bytecode);
                 bytecode.push(get_bytecode("get_property".to_string()));
-                bytecode
             }
             Expression::Nothing(_) => {
-                let mut bytecode = vec![];
                 bytecode.push(get_bytecode("load_const".to_string()));
                 bytecode.push(get_bytecode("nothing".to_string()));
-
-                bytecode
             }
             _ => {
                 panic!("unhandled expression type")
             }
-        }
+        };
+
+        if drop_value {
+            bytecode.push(get_bytecode("drop".to_string()));
+        };
+        bytecode
     }
 
     fn compile_import(node: &ImportStatement) -> Vec<u8> {

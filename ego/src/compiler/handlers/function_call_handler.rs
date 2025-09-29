@@ -5,7 +5,7 @@ use crate::{
 
 use self_vm::utils::{to_bytes::bytes_from_32, Number};
 
-pub fn function_call_as_bytecode(node: &CallExpression, drop_value: bool) -> Vec<u8> {
+pub fn function_call_as_bytecode(node: &CallExpression) -> Vec<u8> {
     let mut bytecode = vec![];
 
     // callee

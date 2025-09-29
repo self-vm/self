@@ -30,6 +30,7 @@ pub fn get_codes_map() -> HashMap<String, u8> {
     m.insert("import".to_string(), 0x15);
     m.insert("export".to_string(), 0x16);
     m.insert("return".to_string(), 0x17);
+    m.insert("drop".to_string(), 0x18);
 
     // builtin functions opcode - level: 0
     m.insert("print".to_string(), 0x02);
@@ -70,6 +71,7 @@ pub enum Opcode {
     Import,
     Export,
     Return,
+    Drop,
     Add,
     Substract,
     Multiply,
@@ -112,6 +114,7 @@ impl Opcode {
             0x15 => Opcode::Import,
             0x16 => Opcode::Export,
             0x17 => Opcode::Return,
+            0x18 => Opcode::Drop,
             _ => Opcode::Unknown,
         }
     }

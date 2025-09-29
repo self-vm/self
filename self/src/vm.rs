@@ -210,6 +210,10 @@ impl Vm {
 
                         self.pc += 1;
                     }
+                    Opcode::Drop => {
+                        self.operand_stack.pop();
+                        self.pc += 1;
+                    }
                     Opcode::JumpIfFalse => {
                         let offset = Vm::read_offset(&self.bytecode[self.pc + 1..self.pc + 5]);
                         self.pc += 4;
