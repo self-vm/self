@@ -1,3 +1,4 @@
+use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -20,10 +21,16 @@ impl Compile {
         self.args.contains(&"-d".to_string())
     }
     pub fn exec(&self) {
-        let (module_name, out_name) = if self.args.len() > 1 {
-            (self.args[0].clone(), self.args[1].clone())
+        let module_name = if self.args.len() > 0 {
+            self.args[0].clone()
         } else {
-            ("main.ego".to_string(), "main.b".to_string()) // default lookup on a ego project
+            "main.ego".to_string() // default lookup on a ego project
+        };
+
+        let out_name = if self.args.len() > 1 {
+            self.args[1].clone()
+        } else {
+            "bytecode.se".to_string()
         };
 
         let file_content = fs::read_to_string(&module_name).unwrap_or_else(|_| {
@@ -52,7 +59,16 @@ impl Compile {
         let mut compiler = Compiler::new(ast);
         let bytecode = compiler.gen_bytecode();
 
-        let mut file = match File::create(&out_name) {
+        let cwd = env::current_dir().unwrap_or_else(|_e| {
+            error::throw(
+                ErrorType::FatalError,
+                format!("error getting cwd\n").as_str(),
+                None,
+            );
+            std::process::exit(1); // to avoid types error
+        });
+
+        let mut file = match File::create(cwd.join(out_name)) {
             Ok(file) => file,
             Err(_) => {
                 error::throw(ErrorType::SyntaxError, "Cannot write file", None);
