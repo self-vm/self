@@ -514,7 +514,9 @@ pub async fn generate_link(
     }
 
     let cleaned = get_response_json(answer);
-    println!("{}", cleaned);
+    if debug {
+        println!("AI.CHAIN [RESPONSE] -> {}", cleaned);
+    }
     let chain_link: ChainLinkJson = if let Ok(val) = serde_json::from_str(cleaned.as_str()) {
         val
     } else {
