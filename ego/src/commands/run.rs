@@ -26,6 +26,25 @@ impl Run {
             "main.ego".to_string() // default lookup on a ego project
         };
 
+        // run from compiled file
+        if self.args.contains(&"--bytes".to_string()) {
+            let bytecode = fs::read(&module_name).unwrap_or_else(|_| {
+                error::throw(
+                    ErrorType::FatalError,
+                    format!("Cannot read {}\n", module_name).as_str(),
+                    None,
+                );
+                std::process::exit(1); // to avoid types error
+            });
+            let mut vm = self_vm::new(bytecode);
+            let execution = vm.run(&self.args).await;
+            if let Some(err) = execution.error {
+                let error_msg = format!("{}: {}", err.message, err.semantic_message);
+                eprintln!("\x1b[31m[ERR] \x1b[0m{error_msg}");
+            }
+            return;
+        }
+
         let file_content = fs::read_to_string(&module_name).unwrap_or_else(|_| {
             error::throw(
                 ErrorType::FatalError,
@@ -48,35 +67,13 @@ impl Run {
         if self.debug() {
             println!("\nAst nodes: \n---------------\n{:#?}", ast);
         }
-
-        if self.args.contains(&"--bytes".to_string()) {
-            let mut compiler = Compiler::new(ast);
-            let bytecode = compiler.gen_bytecode();
-            let bytecode_string: String = bytecode
-                .iter()
-                .map(|byte| format!("{:02X}", byte))
-                .collect::<Vec<String>>()
-                .join(" ");
-
-            let mut file = match File::create("bytecode.bin") {
-                Ok(file) => file,
-                Err(_) => {
-                    error::throw(ErrorType::SyntaxError, "Cannot write file", None);
-                    unreachable!()
-                }
-            };
-            match file.write_all(&bytecode) {
-                Ok(_) => println!("Bytes saved in bytecode.bin\n{}", bytecode_string),
-                Err(_) => {
-                    error::throw(ErrorType::SyntaxError, "Cannot write file", None);
-                    unreachable!()
-                }
-            };
-        } else {
-            let mut compiler = Compiler::new(ast);
-            let bytecode = compiler.gen_bytecode();
-            let mut vm = self_vm::new(bytecode);
-            vm.run(&self.args).await;
+        let mut compiler = Compiler::new(ast);
+        let bytecode = compiler.gen_bytecode();
+        let mut vm = self_vm::new(bytecode);
+        let execution = vm.run(&self.args).await;
+        if let Some(err) = execution.error {
+            let error_msg = format!("{}: {}", err.message, err.semantic_message);
+            eprintln!("\x1b[31m[ERR] \x1b[0m{error_msg}");
         }
     }
 }
