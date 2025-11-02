@@ -531,6 +531,7 @@ pub async fn generate_link(
         println!("AI.CHAIN <- {:#?}", chain_link)
     }
 
+    // todo:
     // for the moment the function is allocated on
     // execution. but we should have a way of on a
     // native module import executed the generic code

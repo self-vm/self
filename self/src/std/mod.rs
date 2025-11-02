@@ -6,6 +6,7 @@ pub mod fs;
 pub mod heap_utils;
 pub mod io;
 pub mod mcp;
+pub mod native;
 pub mod net;
 pub mod os;
 pub mod path;
@@ -17,6 +18,7 @@ pub mod web;
 pub enum NativeModule {
     AI,
     SelfMod,
+    Native,
     Mcp,
     Fs,
     Os,
@@ -76,6 +78,7 @@ pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
     match module_name {
         "ai" => Some(NativeModule::AI),
         "self" => Some(NativeModule::SelfMod),
+        "native" => Some(NativeModule::Native),
         "fs" => Some(NativeModule::Fs),
         "os" => Some(NativeModule::Os),
         "net" => Some(NativeModule::Net),
@@ -94,6 +97,7 @@ pub fn generate_native_module(
     match module {
         NativeModule::AI => ai::generate_struct(),
         NativeModule::SelfMod => selfmod::generate_struct(),
+        NativeModule::Native => native::generate_struct(),
         NativeModule::Fs => fs::generate_struct(),
         NativeModule::Os => os::generate_struct(),
         NativeModule::Net => net::generate_struct(),

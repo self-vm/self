@@ -308,7 +308,7 @@ impl Compiler {
                 let call_expression_bytecode = match v.get_callee().as_str() {
                     "print" => handlers::print_as_bytecode(v),
                     "println" => handlers::print_as_bytecode(v), // both print types can be handled by the same function
-                    "call" => handlers::call_as_bytecode(v),
+                    "ffi_call" => handlers::call_as_bytecode(v),
                     "ai" => handlers::function_call_as_bytecode(v),
                     _ => handlers::function_call_as_bytecode(v),
                 };

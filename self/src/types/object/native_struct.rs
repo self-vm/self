@@ -3,6 +3,7 @@ use crate::{
     std::{
         ai::types::{Action, Chain, Link},
         mcp::types::{McpClient, McpTool},
+        native::types::NativeLib,
         net::types::{NetServer, NetStream},
     },
     types::Value,
@@ -21,6 +22,8 @@ pub enum NativeStruct {
     // mcp
     McpClient(McpClient),
     McpTool(McpTool),
+    // native
+    NativeLib(NativeLib),
 }
 
 impl NativeStruct {
@@ -33,6 +36,7 @@ impl NativeStruct {
             NativeStruct::Link(x) => x.to_string(vm),
             NativeStruct::McpClient(x) => x.to_string(),
             NativeStruct::McpTool(x) => x.to_string(),
+            NativeStruct::NativeLib(x) => x.to_string(vm),
         }
     }
 
@@ -48,6 +52,7 @@ impl NativeStruct {
             NativeStruct::Link(x) => x.shape.property_access(property),
             NativeStruct::McpClient(x) => x.shape.property_access(property),
             NativeStruct::McpTool(x) => x.shape.property_access(property),
+            NativeStruct::NativeLib(x) => x.property_access(property),
         }
     }
 

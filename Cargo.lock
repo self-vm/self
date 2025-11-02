@@ -1489,6 +1489,7 @@ dependencies = [
  "chromiumoxide",
  "dotenvy",
  "futures",
+ "libloading",
  "regex",
  "reqwest",
  "rmcp",
