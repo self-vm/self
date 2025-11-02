@@ -60,7 +60,7 @@ impl NativeModuleDef {
         let formatted_members: Vec<String> = self
             .members
             .iter()
-            .map(|member| member.to_string())
+            .map(|member| format!(" > {}", member.to_string()))
             .collect();
         format!(
             "
