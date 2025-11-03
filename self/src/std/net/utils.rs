@@ -9,6 +9,8 @@ pub fn tls(host_with_port: &str) -> Result<StreamOwned<ClientConnection, TcpStre
         .ok_or("host must include the port")?;
 
     let roots = rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default(); // only sets the crypto provider on the first execution
+
     let cfg = Arc::new(
         ClientConfig::builder()
             .with_root_certificates(roots)
