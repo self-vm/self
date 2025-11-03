@@ -4,6 +4,7 @@ pub mod ai;
 pub mod env;
 pub mod fs;
 pub mod heap_utils;
+pub mod http;
 pub mod io;
 pub mod mcp;
 pub mod native;
@@ -19,11 +20,12 @@ pub enum NativeModule {
     AI,
     SelfMod,
     Native,
-    Mcp,
     Fs,
     Os,
     Net,
     Env,
+    Mcp,
+    Http,
     Web,
     Path,
     Io,
@@ -85,6 +87,7 @@ pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
         "env" => Some(NativeModule::Env),
         "path" => Some(NativeModule::Path),
         "mcp" => Some(NativeModule::Mcp),
+        "http" => Some(NativeModule::Http),
         "web" => Some(NativeModule::Web),
         "io" => Some(NativeModule::Io),
         _ => None,
@@ -104,6 +107,7 @@ pub fn generate_native_module(
         NativeModule::Env => env::generate_struct(),
         NativeModule::Path => path::generate_struct(),
         NativeModule::Mcp => mcp::generate_struct(),
+        NativeModule::Http => http::generate_struct(),
         NativeModule::Web => web::generate_struct(),
         NativeModule::Io => io::generate_struct(),
     }
@@ -121,6 +125,7 @@ pub fn gen_native_modules_defs() -> Vec<NativeModuleDef> {
         fs::generate_mod_def(),
         ai::generate_mod_def(),
         web::generate_mod_def(),
+        http::generate_mod_def(),
         io::generate_mod_def(),
     ];
 }
