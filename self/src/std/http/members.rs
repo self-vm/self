@@ -1,8 +1,3 @@
-/*
-    in order to extend the MCP api read the docs of
-    rmcp at https://github.com/modelcontextprotocol/rust-sdk
-*/
-
 use crate::{
     core::error::{self, net_errors::NetErrors, type_errors::TypeError, VMError, VMErrorType},
     memory::{Handle, MemObject},
