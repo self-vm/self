@@ -3,7 +3,10 @@ use crate::{
     heap::HeapRef,
     memory::{Handle, MemObject},
     types::{
-        object::func::{Engine, Function},
+        object::{
+            func::{Engine, Function},
+            string::SelfString,
+        },
         raw::RawValue,
         Value,
     },
@@ -79,7 +82,7 @@ pub fn get(
     let var = env::var(key);
     match var {
         Ok(v) => {
-            let handle = vm.memory.alloc(MemObject::String(v));
+            let handle = vm.memory.alloc(MemObject::String(SelfString::new(v)));
             Ok(Value::Handle(handle))
         }
         Err(_) => Ok(Value::RawValue(RawValue::Nothing)),

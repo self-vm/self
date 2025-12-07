@@ -6,6 +6,7 @@ use crate::{
     types::object::{
         func::Function,
         native_struct::NativeStruct,
+        string::SelfString,
         structs::{StructDeclaration, StructLiteral},
         vector::Vector,
     },
@@ -168,7 +169,8 @@ impl Entry {
         self.rc += 1;
     }
     pub fn rc_decrement(&mut self) -> u32 {
-        self.rc -= 1;
+        // comment unstable rc decrement feature
+        // self.rc -= 1;
         self.rc
     }
 }
@@ -190,7 +192,7 @@ impl PointerType {
 // STORED OBJECTS ON THE MEMORY
 #[derive(Debug)]
 pub enum MemObject {
-    String(String),
+    String(SelfString),
     Function(Function),
     StructDeclaration(StructDeclaration),
     StructLiteral(StructLiteral),

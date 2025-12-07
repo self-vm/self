@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::core::error::{self, VMError, VMErrorType};
 use crate::memory::{Handle, MemObject};
+use crate::std::heap_utils::put_string;
 use crate::std::{NativeMember, NativeModuleDef};
 use crate::types::object::func::{Engine, Function};
 use crate::types::Value;
@@ -18,9 +19,10 @@ fn join(
         let value = value.as_string_obj(vm)?;
         acc.push(value);
     }
-    Ok(Value::Handle(vm.memory.alloc(MemObject::String(
+    Ok(Value::Handle(put_string(
+        vm,
         acc.to_str().unwrap().to_string(),
-    ))))
+    )))
 }
 
 pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {

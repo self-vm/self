@@ -6,7 +6,9 @@ use crate::{
     memory::{Handle, MemObject},
     std::ai::members::unfold_obj,
     types::{
-        object::{native_struct::NativeStruct, structs::StructLiteral, vector::Vector},
+        object::{
+            native_struct::NativeStruct, string::SelfString, structs::StructLiteral, vector::Vector,
+        },
         raw::{bool::Bool, utf8::Utf8, RawValue},
         Value,
     },
@@ -80,9 +82,13 @@ impl Link {
         result: String,
         vm: &mut Vm,
     ) -> Link {
-        let link_def_handle = vm.memory.alloc(MemObject::String(link_def));
-        let end_condition_handle = vm.memory.alloc(MemObject::String(end_condition));
-        let result_handle = vm.memory.alloc(MemObject::String(result));
+        let link_def_handle = vm
+            .memory
+            .alloc(MemObject::String(SelfString::new(link_def)));
+        let end_condition_handle = vm
+            .memory
+            .alloc(MemObject::String(SelfString::new(end_condition)));
+        let result_handle = vm.memory.alloc(MemObject::String(SelfString::new(result)));
         let action_handle = vm
             .memory
             .alloc(MemObject::NativeStruct(NativeStruct::Action(action)));
@@ -124,8 +130,10 @@ impl Chain {
     ) -> Chain {
         let mut fields = HashMap::new();
 
-        let purpose_handle = vm.memory.alloc(MemObject::String(purpose));
-        let end_condition_handle = vm.memory.alloc(MemObject::String(end_condition));
+        let purpose_handle = vm.memory.alloc(MemObject::String(SelfString::new(purpose)));
+        let end_condition_handle = vm
+            .memory
+            .alloc(MemObject::String(SelfString::new(end_condition)));
         let unfold_handle = vm.memory.alloc(unfold_obj());
 
         // chain

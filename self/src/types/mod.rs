@@ -88,7 +88,7 @@ impl Value {
                         ));
                     }
                 };
-                Ok(request.clone())
+                Ok(request.value.clone())
             }
             Value::RawValue(r) => match r {
                 RawValue::Utf8(s) => Ok(s.value.clone()),

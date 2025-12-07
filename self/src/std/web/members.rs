@@ -9,7 +9,10 @@ use crate::{
     memory::{Handle, MemObject},
     std::NativeMember,
     types::{
-        object::func::{Engine, Function},
+        object::{
+            func::{Engine, Function},
+            string::SelfString,
+        },
         raw::{u32::U32, RawValue},
         Value,
     },
@@ -91,7 +94,7 @@ fn open(
 
         pump.abort();
 
-        let html_handle = vm.memory.alloc(MemObject::String(content));
+        let html_handle = vm.memory.alloc(MemObject::String(SelfString::new(content)));
         Ok(Value::Handle(html_handle))
     })
 }

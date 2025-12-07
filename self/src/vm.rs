@@ -13,10 +13,12 @@ use crate::memory::MemoryManager;
 use crate::opcodes::DataType;
 use crate::opcodes::Opcode;
 use crate::std::bootstrap_default_lib;
+use crate::std::heap_utils::put_string;
 use crate::std::vector;
 use crate::std::{generate_native_module, get_native_module_type};
 use crate::types::object::func::Engine;
 use crate::types::object::func::Function;
+use crate::types::object::string::SelfString;
 use crate::types::object::structs::StructDeclaration;
 use crate::types::object::structs::StructLiteral;
 use crate::types::object::vector::Vector;
@@ -332,7 +334,7 @@ impl Vm {
                             .map(|val| {
                                 match val {
                                     Value::Handle(r) => match self.memory.resolve(&r) {
-                                        MemObject::String(s) => s.clone(),
+                                        MemObject::String(s) => s.value.clone(),
                                         _ => {
                                             // TODO: use self-vm errors sytem
                                             panic!("Invalid param type for a function declaration")
@@ -469,7 +471,7 @@ impl Vm {
                         if let MemObject::String(property_key) = property {
                             match object {
                                 MemObject::StructLiteral(x) => {
-                                    let value = x.property_access(&property_key);
+                                    let value = x.property_access(&property_key.value);
                                     if let Some(prop) = value {
                                         let bound_access =
                                             BoundAccess::new(object_handle.clone(), Box::new(prop));
@@ -488,7 +490,7 @@ impl Vm {
                                     }
                                 }
                                 MemObject::NativeStruct(x) => {
-                                    let value = x.property_access(&property_key);
+                                    let value = x.property_access(&property_key.value);
                                     if let Some(prop) = value {
                                         let bound_access =
                                             BoundAccess::new(object_handle.clone(), Box::new(prop));
@@ -507,7 +509,7 @@ impl Vm {
                                     }
                                 }
                                 MemObject::Vector(x) => {
-                                    let value = x.property_access(&property_key);
+                                    let value = x.property_access(&property_key.value);
                                     if let Some(prop) = value {
                                         let bound_access =
                                             BoundAccess::new(object_handle.clone(), Box::new(prop));
@@ -570,7 +572,7 @@ impl Vm {
                                 if debug {
                                     println!("CALL -> {}", identifier_name.to_string())
                                 };
-                                match identifier_name.as_str() {
+                                match identifier_name.value.as_str() {
                                     // BUILTIN FUNCTIONS
                                     "eprintln" => {
                                         println!("------ eprintln")
@@ -579,13 +581,13 @@ impl Vm {
                                     _ => {
                                         // get the identifier from the heap
                                         let value = if let Some(value) =
-                                            self.call_stack.resolve(&identifier_name)
+                                            self.call_stack.resolve(&identifier_name.value)
                                         {
                                             value
                                         } else {
                                             return VMExecutionResult::terminate_with_errors(
                                                 VMErrorType::UndeclaredIdentifierError(
-                                                    identifier_name.clone(),
+                                                    identifier_name.value.clone(),
                                                 ),
                                                 self,
                                             );
@@ -623,7 +625,7 @@ impl Vm {
                                                 } else {
                                                     return VMExecutionResult::terminate_with_errors(
                                                     VMErrorType::NotCallableError(
-                                                        identifier_name.clone(),
+                                                        identifier_name.value.clone(),
                                                     ),
                                                     self,
                                                 );
@@ -632,7 +634,7 @@ impl Vm {
                                             _ => {
                                                 return VMExecutionResult::terminate_with_errors(
                                                     VMErrorType::NotCallableError(
-                                                        identifier_name.clone(),
+                                                        identifier_name.value.clone(),
                                                     ),
                                                     self,
                                                 );
@@ -830,7 +832,7 @@ impl Vm {
                             let arg = self.memory.resolve(&r);
                             if let MemObject::String(s) = arg {
                                 if debug {
-                                    println!("EXPORT -> {}", s)
+                                    println!("EXPORT -> {}", s.value)
                                 }
                                 self.call_stack.add_export(s.to_string());
                             } else {
@@ -1152,14 +1154,15 @@ impl Vm {
                     (MemObject::String(left_string), MemObject::String(right_string)) => {
                         match operator {
                             "+" => {
-                                let result_string = format!("{left_string}{right_string}");
-                                Value::Handle(self.memory.alloc(MemObject::String(result_string)))
+                                let result_string =
+                                    format!("{}{}", left_string.value, right_string.value);
+                                Value::Handle(put_string(self, result_string))
                             }
                             "==" => Value::RawValue(RawValue::Bool(Bool::new(
-                                left_string == right_string,
+                                left_string.value == right_string.value,
                             ))),
                             "!=" => Value::RawValue(RawValue::Bool(Bool::new(
-                                left_string == right_string,
+                                left_string.value == right_string.value,
                             ))),
                             _ => {
                                 return Some(VMErrorType::InvalidBinaryOperation(
@@ -1438,7 +1441,7 @@ impl Vm {
                     String::from_utf8(value.clone()).expect("Provided value is not valid UTF-8");
                 printable_value = value.to_string();
 
-                let value_handle = self.memory.alloc(MemObject::String(value));
+                let value_handle = self.memory.alloc(MemObject::String(SelfString::new(value)));
                 Value::Handle(value_handle)
             }
             DataType::Vector => {
@@ -1490,7 +1493,7 @@ impl Vm {
                         let field_name = self.memory.free(&field_handle);
                         if let MemObject::String(field_name) = field_name {
                             // add field with it's value to StructLiteral fields
-                            fields.insert(field_name, field_value);
+                            fields.insert(field_name.to_string(), field_value);
                         } else {
                             // TODO: handle with self-vm errors system
                             panic!("struct field_name must be a MemObject of type string");

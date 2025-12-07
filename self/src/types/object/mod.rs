@@ -2,6 +2,7 @@ use crate::{memory::Handle, types::Value};
 
 pub mod func;
 pub mod native_struct;
+pub mod string;
 pub mod structs;
 pub mod vector;
 

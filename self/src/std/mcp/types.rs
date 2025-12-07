@@ -5,7 +5,10 @@ use rmcp::{model::InitializeRequestParam, service::RunningService, RoleClient};
 
 use crate::{
     memory::MemObject,
-    std::mcp::members::{list_tools_obj, shutdown_obj},
+    std::{
+        heap_utils::put_string,
+        mcp::members::{list_tools_obj, shutdown_obj},
+    },
     types::{object::structs::StructLiteral, Value},
     vm::Vm,
 };
@@ -67,11 +70,11 @@ impl McpTool {
 
         // add name in struct and in struct.shape to allow
         // direct rust access and direct ego access
-        let name_handle = vm.memory.alloc(MemObject::String(name.clone()));
+        let name_handle = put_string(vm, name.clone());
         fields.insert("name".to_string(), Value::Handle(name_handle));
 
         if let Some(desc) = description {
-            let desc_handle = vm.memory.alloc(MemObject::String(desc));
+            let desc_handle = put_string(vm, desc);
             fields.insert("description".to_string(), Value::Handle(desc_handle));
         }
 

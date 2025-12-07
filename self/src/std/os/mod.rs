@@ -1,6 +1,7 @@
 use crate::core::error::os_errors::OsError;
 use crate::core::error::{self, VMError, VMErrorType};
 use crate::memory::{Handle, MemObject};
+use crate::std::heap_utils::put_string;
 use crate::std::{NativeMember, NativeModuleDef};
 use crate::types::object::func::{Engine, Function};
 use crate::types::Value;
@@ -18,9 +19,7 @@ fn get_cwd(
                 if debug {
                     println!("OS.GET_CWD -> {}", path);
                 }
-                Ok(Value::Handle(
-                    vm.memory.alloc(MemObject::String(path.to_string())),
-                ))
+                Ok(Value::Handle(put_string(vm, path.to_string())))
             } else {
                 Err(error::throw(
                     VMErrorType::Os(OsError::__placeholder("non utf8 path".to_string())),

@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use crate::{
     core::error::VMError,
     memory::{Handle, MemObject},
-    std::NativeMember,
+    std::{heap_utils::put_string, NativeMember},
     types::{
         object::func::{Engine, Function},
         Value,
@@ -45,6 +45,6 @@ pub fn read_line(
         .expect("Failed to read line");
     let input = input.trim(); // remove the new line
 
-    let stdin_handle = vm.memory.alloc(MemObject::String(input.to_string()));
+    let stdin_handle = put_string(vm, input.to_string());
     Ok(Value::Handle(stdin_handle))
 }

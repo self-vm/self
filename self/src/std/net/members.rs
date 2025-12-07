@@ -6,6 +6,7 @@ use std::net::{TcpListener, TcpStream};
 use crate::core::error::net_errors::NetErrors;
 use crate::core::error::{self, VMErrorType};
 use crate::memory::Handle;
+use crate::std::heap_utils::put_string;
 use crate::std::net::types::{NetServer, NetStream, StreamKind};
 use crate::std::net::utils::tls;
 use crate::types::object::native_struct::NativeStruct;
@@ -66,7 +67,7 @@ pub fn connect(
 
     let mut shape = HashMap::new();
     let owned_host = host.clone();
-    let host_ref = vm.memory.alloc(MemObject::String(host.clone()));
+    let host_ref = put_string(vm, host.clone());
     let write_ref = vm.memory.alloc(MemObject::Function(Function::new(
         "write".to_string(),
         vec![],
@@ -149,8 +150,10 @@ fn read(
             vm,
         ));
     };
-    let read_obj = MemObject::String(String::from_utf8_lossy(&buffer[..bytes_count]).to_string());
-    Ok(Value::Handle(vm.memory.alloc(read_obj)))
+    Ok(Value::Handle(put_string(
+        vm,
+        String::from_utf8_lossy(&buffer[..bytes_count]).to_string(),
+    )))
 }
 
 ///// listen
@@ -216,7 +219,7 @@ fn accept(
 
     let host = sock_addr.to_string();
     let mut shape = HashMap::new();
-    let host_ref = vm.memory.alloc(MemObject::String(host.clone()));
+    let host_ref = put_string(vm, host.clone());
     let write_ref = vm.memory.alloc(MemObject::Function(Function::new(
         "write".to_string(),
         vec![],
