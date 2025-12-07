@@ -1,13 +1,7 @@
-Custom License — Collaborative Use by Explicit Authorization Only
+Copyright 2026 self
 
-Copyright (c) 2025 ego
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-All rights reserved.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-This software is proprietary and confidential. No part of this software may be used, copied, modified, distributed, sublicensed, or incorporated into any other product, software, or project without prior written consent from the ego organization.
-
-Collaboration and contributions are strictly limited to individuals who have been explicitly authorized by the ego organization. Any unauthorized access, reproduction, use, or disclosure is strictly prohibited and may result in legal action.
-
-To request permission to access or contribute to this software, please contact the ego organization directly.
-
-Contact: contact.cristiansanchez@gmail.com
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
