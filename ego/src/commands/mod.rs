@@ -30,7 +30,7 @@ impl Command {
             // print help message instead of error
             error::throw(
                 ErrorType::EgoUsageError,
-                "a command is required to execute ego",
+                "a command is required",
                 None,
             );
             std::process::exit(1); // to avoid types error

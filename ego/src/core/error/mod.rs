@@ -33,7 +33,7 @@ pub fn throw(error_type: ErrorType, error_message: &str, line: Option<usize>) {
         ErrorType::IOError => "IO error: ",
     };
 
-    log!("\n[ego] {error_string} {error_message}");
+    log!("\n[self] {error_string} {error_message}");
     if let Some(line) = line {
         log!("      └ on line: {line}");
     }
