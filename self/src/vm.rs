@@ -594,8 +594,28 @@ impl Vm {
                                 };
                                 match identifier_name.value.as_str() {
                                     // BUILTIN FUNCTIONS
-                                    "eprintln" => {
-                                        println!("------ eprintln")
+                                    "type" => {
+                                        let var_type = match &args[0] {
+                                            Value::BoundAccess(_) => {
+                                                todo!("Implement bound acces lookup")
+                                            }
+                                            Value::Handle(h) => self.memory.resolve(&h).get_type(),
+                                            Value::RawValue(r) => match r {
+                                                RawValue::Bool(v) => "bool".to_string(),
+                                                RawValue::Utf8(v) => "string".to_string(),
+                                                RawValue::I32(v) => "number".to_string(),
+                                                RawValue::I64(v) => "number".to_string(),
+                                                RawValue::U32(v) => "number".to_string(),
+                                                RawValue::U64(v) => "number".to_string(),
+                                                RawValue::F64(v) => "number".to_string(),
+                                                RawValue::Nothing => "nothing".to_string(),
+                                            },
+                                        };
+
+                                        self.push_to_stack(
+                                            Value::RawValue(RawValue::Utf8(Utf8::new(var_type))),
+                                            Some("type".to_string()),
+                                        );
                                     }
                                     // RUNTIME DEFINED FUNCTIONS
                                     _ => {
