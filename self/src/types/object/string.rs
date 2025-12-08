@@ -16,10 +16,7 @@ impl SelfString {
             members: HashMap::new(),
         };
 
-        if let Some(members_handlers) = add_handlers(vm) {
-            self_string.members = members_handlers;
-        }
-
+        self_string.members = add_handlers(vm);
         self_string
     }
 

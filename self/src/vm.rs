@@ -23,6 +23,7 @@ use crate::types::object::structs::StructDeclaration;
 use crate::types::object::structs::StructLiteral;
 use crate::types::object::vector::Vector;
 use crate::types::object::BoundAccess;
+use crate::types::raw::utf8::Utf8;
 use crate::types::raw::RawValue;
 use crate::types::raw::{bool::Bool, f64::F64, i32::I32, i64::I64, u32::U32, u64::U64};
 use crate::utils::foreign_handlers_utils::get_foreign_handlers;
@@ -1214,11 +1215,51 @@ impl Vm {
 
                 value = result_value;
             }
-            (Value::Handle(_), Value::RawValue(_)) => {
-                return Some(VMErrorType::TypeCoercionError(right))
+            (Value::Handle(l), Value::RawValue(r)) => {
+                // for the moment allow stack strings and memory strings
+                // binary operations
+                let l_heap_object = self.memory.resolve(&l);
+
+                if l_heap_object.get_type() != "string" || r.get_type_string() != "UTF8" {
+                    return Some(VMErrorType::TypeCoercionError(right));
+                }
+
+                match operator {
+                    "==" => {
+                        value = Value::RawValue(RawValue::Bool(Bool::new(
+                            l_heap_object.to_string(self) == r.to_string(),
+                        )))
+                    }
+                    _ => {
+                        // TODO: we should probably refactor this logic and make it happen
+                        // implementing a trait on each type rather than handling manually
+                        // all the possible combinations
+                        panic!("operator not implemented for coerced types")
+                    }
+                };
             }
-            (Value::RawValue(_), Value::Handle(_)) => {
-                return Some(VMErrorType::TypeCoercionError(right))
+            (Value::RawValue(l), Value::Handle(r)) => {
+                // for the moment allow stack strings and memory strings
+                // binary operations
+                let r_heap_object = self.memory.resolve(&r);
+
+                if r_heap_object.get_type() != "string" || l.get_type_string() != "UTF8" {
+                    return Some(VMErrorType::TypeCoercionError(right));
+                }
+
+                match operator {
+                    "==" => {
+                        value = Value::RawValue(RawValue::Bool(Bool::new(
+                            r_heap_object.to_string(self) == l.to_string(),
+                        )))
+                    }
+                    _ => {
+                        // TODO: we should probably refactor this logic and make it happen
+                        // implementing a trait on each type rather than handling manually
+                        // all the possible combinations
+                        panic!("operator not implemented for coerced types")
+                    }
+                };
             }
             _ => {
                 panic!("invalid Value type for a binary expression")

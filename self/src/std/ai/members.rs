@@ -27,6 +27,7 @@ use crate::{
             types::{AIAction, Action, Chain, ChainLinkJson, Link, UnfoldStore},
         },
         gen_native_modules_defs, generate_native_module, get_native_module_type,
+        heap_utils::put_string,
         utils::cast_json_value,
         vector, NativeMember,
     },
@@ -53,7 +54,7 @@ fn get_response_json(response: &String) -> String {
     cleaned.to_string()
 }
 
-fn ai_response_parser(response: &String) -> Option<Value> {
+fn ai_response_parser(response: &String, vm: &mut Vm) -> Option<Value> {
     let cleaned = get_response_json(response);
     let json: SValue = serde_json::from_str(cleaned.as_str()).ok()?;
     let raw_value = json.get("value")?;
@@ -70,9 +71,8 @@ fn ai_response_parser(response: &String) -> Option<Value> {
             Some(Value::RawValue(RawValue::Nothing))
         } else {
             let value = raw_value.as_str().unwrap();
-            Some(Value::RawValue(RawValue::Utf8(Utf8::new(
-                value.to_string(),
-            ))))
+            let handle = put_string(vm, value.to_string());
+            Some(Value::Handle(handle))
         }
     } else {
         Some(Value::RawValue(RawValue::Nothing))
@@ -132,7 +132,7 @@ pub fn infer(
             println!("AI -> {}", answer);
         }
 
-        let parsed_answer = ai_response_parser(answer);
+        let parsed_answer = ai_response_parser(answer, vm);
         if let Some(v) = parsed_answer {
             return Ok(v);
         } else {
@@ -198,7 +198,7 @@ pub fn resolve(
             println!("AI -> {}", answer);
         }
 
-        let parsed_answer = ai_response_parser(answer);
+        let parsed_answer = ai_response_parser(answer, vm);
         if let Some(v) = parsed_answer {
             return Ok(v);
         } else {

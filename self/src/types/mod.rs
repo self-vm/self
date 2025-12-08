@@ -350,7 +350,54 @@ impl Value {
             _ => {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {
-                        expected: "string".to_string(),
+                        expected: "bool".to_string(),
+                        received: "unknown_type".to_string(),
+                    },
+                    vm,
+                ));
+            }
+        }
+    }
+
+    pub fn as_usize(&self, vm: &Vm) -> Result<usize, VMError> {
+        match self {
+            Value::RawValue(r) => match r {
+                RawValue::U32(v) => Ok(v.value as usize),
+                RawValue::U64(v) => Ok(v.value as usize),
+                RawValue::I32(v) => Ok(v.value as usize),
+                RawValue::I64(v) => Ok(v.value as usize),
+                _ => {
+                    return Err(error::throw(
+                        VMErrorType::TypeMismatch {
+                            expected: "u32 or u64".to_string(),
+                            received: r.get_type_string(),
+                        },
+                        vm,
+                    ));
+                }
+            },
+            Value::BoundAccess(_) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "u32 or u64".to_string(),
+                        received: self.get_resolved_type(vm),
+                    },
+                    vm,
+                ));
+            }
+            Value::Handle(_) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "u32 or u64".to_string(),
+                        received: self.get_resolved_type(vm),
+                    },
+                    vm,
+                ));
+            }
+            _ => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "u32 or u64".to_string(),
                         received: "unknown_type".to_string(),
                     },
                     vm,
