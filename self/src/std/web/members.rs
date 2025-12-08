@@ -94,7 +94,8 @@ fn open(
 
         pump.abort();
 
-        let html_handle = vm.memory.alloc(MemObject::String(SelfString::new(content)));
+        let content_obj = SelfString::new(content, vm);
+        let html_handle = vm.memory.alloc(MemObject::String(content_obj));
         Ok(Value::Handle(html_handle))
     })
 }

@@ -82,13 +82,13 @@ impl Link {
         result: String,
         vm: &mut Vm,
     ) -> Link {
-        let link_def_handle = vm
-            .memory
-            .alloc(MemObject::String(SelfString::new(link_def)));
-        let end_condition_handle = vm
-            .memory
-            .alloc(MemObject::String(SelfString::new(end_condition)));
-        let result_handle = vm.memory.alloc(MemObject::String(SelfString::new(result)));
+        let link_def_obj = SelfString::new(link_def, vm);
+        let end_condition_obj = SelfString::new(end_condition, vm);
+        let result_obj = SelfString::new(result, vm);
+
+        let link_def_handle = vm.memory.alloc(MemObject::String(link_def_obj));
+        let end_condition_handle = vm.memory.alloc(MemObject::String(end_condition_obj));
+        let result_handle = vm.memory.alloc(MemObject::String(result_obj));
         let action_handle = vm
             .memory
             .alloc(MemObject::NativeStruct(NativeStruct::Action(action)));
@@ -128,12 +128,11 @@ impl Chain {
         chain: Vec<Link>,
         vm: &mut Vm,
     ) -> Chain {
-        let mut fields = HashMap::new();
+        let purpose_obj = SelfString::new(purpose, vm);
+        let end_condition_obj = SelfString::new(end_condition, vm);
 
-        let purpose_handle = vm.memory.alloc(MemObject::String(SelfString::new(purpose)));
-        let end_condition_handle = vm
-            .memory
-            .alloc(MemObject::String(SelfString::new(end_condition)));
+        let purpose_handle = vm.memory.alloc(MemObject::String(purpose_obj));
+        let end_condition_handle = vm.memory.alloc(MemObject::String(end_condition_obj));
         let unfold_handle = vm.memory.alloc(unfold_obj());
 
         // chain
@@ -150,6 +149,7 @@ impl Chain {
         )));
 
         // populate fields
+        let mut fields = HashMap::new();
         fields.insert("purpose".to_string(), Value::Handle(purpose_handle));
         fields.insert(
             "end_condition".to_string(),

@@ -82,7 +82,8 @@ pub fn get(
     let var = env::var(key);
     match var {
         Ok(v) => {
-            let handle = vm.memory.alloc(MemObject::String(SelfString::new(v)));
+            let string_obj = SelfString::new(v, vm);
+            let handle = vm.memory.alloc(MemObject::String(string_obj));
             Ok(Value::Handle(handle))
         }
         Err(_) => Ok(Value::RawValue(RawValue::Nothing)),

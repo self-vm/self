@@ -12,6 +12,7 @@ pub mod net;
 pub mod os;
 pub mod path;
 pub mod selfmod;
+pub mod selfstring;
 mod utils;
 pub mod vector;
 pub mod web;

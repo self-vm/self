@@ -38,7 +38,7 @@ pub struct Vm {
     pub memory: MemoryManager,
     bytecode: Vec<u8>,
     pc: usize,
-    handlers: HashMap<String, Handle>,
+    pub handlers: HashMap<String, Handle>,
     ffi_handlers: ForeignHandlers,
 }
 
@@ -527,6 +527,25 @@ impl Vm {
                                         );
                                     }
                                 }
+                                MemObject::String(x) => {
+                                    let value = x.property_access(&property_key.value);
+                                    if let Some(prop) = value {
+                                        let bound_access =
+                                            BoundAccess::new(object_handle.clone(), Box::new(prop));
+                                        self.push_to_stack(
+                                            Value::BoundAccess(bound_access),
+                                            Some(object.to_string(self)),
+                                        );
+                                    } else {
+                                        return VMExecutionResult::terminate_with_errors(
+                                            VMErrorType::Struct(StructError::FieldNotFound {
+                                                field: property_key.to_string(),
+                                                struct_type: object.to_string(self),
+                                            }),
+                                            self,
+                                        );
+                                    }
+                                }
                                 _ => {
                                     panic!(
                                         "<get_property> opcode must be used on a Struct like type"
@@ -579,11 +598,15 @@ impl Vm {
                                     }
                                     // RUNTIME DEFINED FUNCTIONS
                                     _ => {
-                                        // get the identifier from the heap
+                                        // get the identifier from the heap for calling runtime defined functions
                                         let value = if let Some(value) =
                                             self.call_stack.resolve(&identifier_name.value)
                                         {
                                             value
+
+                                        // calling string object members
+                                        } else if let Some(_callee_handle) = callee_handle {
+                                            Value::Handle(_callee_handle)
                                         } else {
                                             return VMExecutionResult::terminate_with_errors(
                                                 VMErrorType::UndeclaredIdentifierError(
@@ -1441,7 +1464,8 @@ impl Vm {
                     String::from_utf8(value.clone()).expect("Provided value is not valid UTF-8");
                 printable_value = value.to_string();
 
-                let value_handle = self.memory.alloc(MemObject::String(SelfString::new(value)));
+                let string_obj = SelfString::new(value, self);
+                let value_handle = self.memory.alloc(MemObject::String(string_obj));
                 Value::Handle(value_handle)
             }
             DataType::Vector => {
@@ -1632,9 +1656,20 @@ impl Vm {
         args
     }
 
+    // methods for builtin handlers like vector methods
     pub fn get_handler(&self, handler: &str) -> Option<Handle> {
         self.handlers.get(handler).cloned()
     }
+
+    pub fn add_handler(
+        &mut self,
+        handler_name: String,
+        handle_obj: Handle,
+    ) -> Result<(), VMErrorType> {
+        self.handlers.insert(handler_name, handle_obj);
+        Ok(())
+    }
+
     pub fn push_to_stack(&mut self, value: Value, origin: Option<String>) {
         self.operand_stack
             .push(OperandsStackValue { value, origin });
