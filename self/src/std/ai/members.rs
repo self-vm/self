@@ -370,9 +370,9 @@ pub fn exec(
                                     .cloned()
                                     .unwrap_or_else(|| {
                                         eprintln!(
-                                    "action runtime defined param cannot be populated (index: {})",
-                                    index
-                                );
+                                            "action runtime defined param cannot be populated (index: {})",
+                                            index
+                                        );
                                         Value::RawValue(RawValue::Nothing)
                                     });
                                 consumer_param_counter += 1;
@@ -418,6 +418,9 @@ pub fn chain_obj() -> MemObject {
         Engine::NativeAsync(chain),
     ))
 }
+
+// FLOW OF THE CHAIN GENERATION:
+// chain -> generate master link -> unfold until end
 
 pub fn chain(
     vm: &mut Vm,
@@ -605,7 +608,7 @@ pub fn unfold(
             ));
         }
 
-        // get chains
+        // get chain links
         let mut links: Vec<Link> = _self
             .shape
             .property_access("links")
@@ -634,10 +637,16 @@ pub fn unfold(
             .unwrap_or(Value::RawValue(RawValue::Nothing))
             .as_string_obj(vm)?;
 
+        let mut result = Value::RawValue(RawValue::Nothing);
         loop {
             // if current link is end link
             // break the loop
             let current_link = links[links.len() - 1].clone();
+            // let def = current_link
+            //     .shape
+            //     .property_access("def")
+            //     .unwrap_or(Value::RawValue(RawValue::Nothing))
+            //     .as_string_obj(vm)?;
             let is_end = current_link
                 .shape
                 .property_access("is_end")
@@ -645,6 +654,13 @@ pub fn unfold(
                 .as_bool(vm)?;
 
             if is_end {
+                let result_string = current_link
+                    .shape
+                    .property_access("result")
+                    .unwrap_or(Value::RawValue(RawValue::Nothing))
+                    .as_string_obj(vm)?;
+                let handle = put_string(vm, result_string);
+                result = Value::Handle(handle);
                 break;
             }
 
@@ -661,20 +677,34 @@ pub fn unfold(
                 return Err(err);
             }
 
-            if let Some(r) = exec_result.result {
-                let v = r.as_bool(vm)?;
-                if !v {
+            let conclusion = if let Some(r) = exec_result.result {
+                let handle = r.as_handle()?;
+                let cb_struct = vm.memory.resolve(&handle).as_struct_literal(vm)?;
+                let continue_unfolding = if let Some(v) = cb_struct.property_access("continue") {
+                    v.as_bool(vm)?
+                } else {
+                    false
+                };
+                let link_resolved_value = if let Some(v) = cb_struct.property_access("resolved") {
+                    v
+                } else {
+                    Value::RawValue(RawValue::Nothing)
+                };
+
+                if !continue_unfolding {
                     // if callback execution is false, means to not execute the action
-                    return Ok(Value::RawValue(RawValue::Bool(Bool::new(false))));
+                    return Ok(Value::RawValue(RawValue::Nothing));
                 }
+
+                link_resolved_value
             } else {
                 return Err(error::throw(
                     VMErrorType::AI(AIError::AIActionForcedAbort(
-                        "chain callback must return a boolean type. true for action exeuction false for aborting.".to_string(),
+                        "unfold callback must return a boolean type. true for action exeuction false for aborting.".to_string(),
                     )),
                     vm,
                 ));
-            }
+            };
 
             // process the current link
             let current_def = current_link
@@ -682,17 +712,6 @@ pub fn unfold(
                 .property_access("def")
                 .unwrap_or(Value::RawValue(RawValue::Nothing))
                 .as_string_obj(vm)?;
-            let conclusion = reflect_link(
-                current_link,
-                memory
-                    .context
-                    .last()
-                    .unwrap_or(&Value::RawValue(RawValue::Nothing))
-                    .clone(),
-                vm,
-                debug,
-            )
-            .await?;
 
             // the context should be a store during the whole execution,
             // something like a hashmap. that has steps, and its conclusions
@@ -717,35 +736,6 @@ pub fn unfold(
             links.push(next_link);
         }
 
-        Ok(Value::RawValue(RawValue::Nothing))
-    })
-}
-
-pub fn reflect_link(
-    link: Link,
-    context: Value,
-    vm: &mut Vm,
-    debug: bool,
-) -> BoxFuture<'_, Result<Value, VMError>> {
-    Box::pin(async move {
-        // execute action
-        // let link_def = current_link
-        //     .shape
-        //     .property_access("def")
-        //     .unwrap_or(Value::RawValue(RawValue::Nothing))
-        //     .as_string_obj(vm)?;
-        let action = link
-            .shape
-            .property_access("action")
-            .unwrap_or(Value::RawValue(RawValue::Nothing))
-            .as_handle()?;
-
-        // here maybe we could handle error on chain execution
-        // step, to have more granularity instead of a generic
-        // function execution error
-        let result = exec(vm, Some(action), vec![context.clone()], debug).await?;
-
-        // return the new context
         Ok(result)
     })
 }

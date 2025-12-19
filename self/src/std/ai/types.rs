@@ -168,6 +168,7 @@ impl Chain {
     }
 }
 
+#[derive(Debug)]
 pub struct UnfoldStore {
     pub prev_links: Vec<String>,
     pub context: Vec<Value>,

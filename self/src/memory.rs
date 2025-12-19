@@ -235,4 +235,17 @@ impl MemObject {
             )),
         }
     }
+
+    pub fn as_struct_literal(&self, vm: &Vm) -> Result<StructLiteral, VMError> {
+        match self {
+            MemObject::StructLiteral(x) => Ok(x.clone()),
+            _ => Err(error::throw(
+                error::VMErrorType::TypeMismatch {
+                    expected: "struct_literal".to_string(),
+                    received: self.get_type(),
+                },
+                vm,
+            )),
+        }
+    }
 }
