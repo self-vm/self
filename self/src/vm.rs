@@ -1206,7 +1206,7 @@ impl Vm {
                                 left_string.value == right_string.value,
                             ))),
                             "!=" => Value::RawValue(RawValue::Bool(Bool::new(
-                                left_string.value == right_string.value,
+                                left_string.value != right_string.value,
                             ))),
                             _ => {
                                 return Some(VMErrorType::InvalidBinaryOperation(
