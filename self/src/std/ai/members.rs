@@ -692,8 +692,8 @@ pub fn unfold(
                 };
 
                 if !continue_unfolding {
-                    // if callback execution is false, means to not execute the action
-                    return Ok(Value::RawValue(RawValue::Nothing));
+                    // return the last resolved value on the callback
+                    return Ok(link_resolved_value);
                 }
 
                 link_resolved_value
