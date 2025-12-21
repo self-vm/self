@@ -1,4 +1,5 @@
 use futures::future::BoxFuture;
+use tokio::sync::mpsc;
 
 use crate::core::error::struct_errors::StructError;
 use crate::core::error::InvalidBinaryOperation;
@@ -7,6 +8,7 @@ use crate::core::execution::VMExecutionResult;
 use crate::core::handlers::call_handler::call_handler;
 use crate::core::handlers::foreign_handlers::ForeignHandlers;
 use crate::core::handlers::print_handler::print_handler;
+use crate::events::Event;
 use crate::memory::Handle;
 use crate::memory::MemObject;
 use crate::memory::MemoryManager;
@@ -41,6 +43,8 @@ pub struct Vm {
     pc: usize,
     pub handlers: HashMap<String, Handle>,
     ffi_handlers: ForeignHandlers,
+    events_queue: mpsc::UnboundedReceiver<Event>,
+    events_sender: mpsc::UnboundedSender<Event>,
 }
 
 impl Vm {
@@ -58,6 +62,9 @@ impl Vm {
             }
         }
 
+        // events queue
+        let (events_sender, events_receiver) = mpsc::unbounded_channel::<Event>();
+
         Vm {
             operand_stack: vec![],
             call_stack: CallStack::new(),
@@ -66,6 +73,8 @@ impl Vm {
             pc: 0,
             handlers: HashMap::new(),
             ffi_handlers,
+            events_queue: events_receiver,
+            events_sender,
         }
     }
 
@@ -1067,6 +1076,12 @@ impl Vm {
                         self.pc += 1;
                     }
                 };
+
+                // drain vm events
+                // if we only get one event on each execution
+                // could happen that we have more events than
+                // iterations on the vm
+                self.drain_events().await;
             }
 
             VMExecutionResult::terminate(None)
@@ -1330,6 +1345,10 @@ impl Vm {
             Engine::Bytecode(bytecode) => {
                 let return_pc = self.pc;
                 let main_bytecode = std::mem::take(&mut self.bytecode);
+                // TODO:
+                // probably in the future we could make that each
+                // stack frame has its own operands stack
+                let prev_operand_stack = std::mem::take(&mut self.operand_stack);
 
                 self.call_stack.push();
                 for (index, param) in func.parameters.iter().enumerate() {
@@ -1341,8 +1360,11 @@ impl Vm {
                             .put_to_frame(param.clone(), Value::RawValue(RawValue::Nothing));
                     }
                 }
+
+                // generate vm states for function execution
                 self.bytecode = bytecode.clone();
                 self.pc = 0;
+                self.operand_stack = vec![];
 
                 let function_exec_result = self.run_bytecode(debug).await;
 
@@ -1355,8 +1377,11 @@ impl Vm {
                         }
                     }
                 }
+
+                // recover vm state
                 self.pc = return_pc;
                 self.bytecode = main_bytecode;
+                self.operand_stack = prev_operand_stack;
 
                 function_exec_result
             }
@@ -1734,6 +1759,25 @@ impl Vm {
     pub fn push_to_stack(&mut self, value: Value, origin: Option<String>) {
         self.operand_stack
             .push(OperandsStackValue { value, origin });
+    }
+
+    // events queue methods
+    pub async fn drain_events(&mut self) {
+        match self.events_queue.try_recv() {
+            Ok(event) => match event {
+                Event::Call(f) => {
+                    self.run_function(&f, None, vec![], false).await;
+                }
+                _ => {
+                    println!("unknown event");
+                }
+            },
+            _ => (),
+        };
+    }
+
+    pub fn get_vm_notifier(&self) -> mpsc::UnboundedSender<Event> {
+        self.events_sender.clone()
     }
 
     pub fn debug_bytecode(&mut self) {

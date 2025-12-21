@@ -1,4 +1,5 @@
 mod core;
+mod events;
 mod heap;
 mod instructions;
 mod memory;
