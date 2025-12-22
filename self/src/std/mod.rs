@@ -11,6 +11,7 @@ pub mod native;
 pub mod net;
 pub mod os;
 pub mod path;
+pub mod schedule;
 pub mod selfmod;
 pub mod selfstring;
 mod utils;
@@ -29,6 +30,7 @@ pub enum NativeModule {
     Http,
     Web,
     Path,
+    Schedule,
     Io,
 }
 
@@ -90,6 +92,7 @@ pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
         "mcp" => Some(NativeModule::Mcp),
         "http" => Some(NativeModule::Http),
         "web" => Some(NativeModule::Web),
+        "schedule" => Some(NativeModule::Schedule),
         "io" => Some(NativeModule::Io),
         _ => None,
     }
@@ -110,6 +113,7 @@ pub fn generate_native_module(
         NativeModule::Mcp => mcp::generate_struct(),
         NativeModule::Http => http::generate_struct(),
         NativeModule::Web => web::generate_struct(),
+        NativeModule::Schedule => schedule::generate_struct(),
         NativeModule::Io => io::generate_struct(),
     }
 }

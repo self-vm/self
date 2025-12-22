@@ -5,6 +5,7 @@ use crate::{
         mcp::types::{McpClient, McpTool},
         native::types::NativeLib,
         net::types::{NetServer, NetStream},
+        schedule::types::Interval,
     },
     types::Value,
     vm::Vm,
@@ -24,6 +25,8 @@ pub enum NativeStruct {
     McpTool(McpTool),
     // native
     NativeLib(NativeLib),
+    // schedule
+    Interval(Interval),
 }
 
 impl NativeStruct {
@@ -37,6 +40,7 @@ impl NativeStruct {
             NativeStruct::McpClient(x) => x.to_string(),
             NativeStruct::McpTool(x) => x.to_string(),
             NativeStruct::NativeLib(x) => x.to_string(vm),
+            NativeStruct::Interval(x) => x.to_string(vm),
         }
     }
 
@@ -53,6 +57,7 @@ impl NativeStruct {
             NativeStruct::McpClient(x) => x.shape.property_access(property),
             NativeStruct::McpTool(x) => x.shape.property_access(property),
             NativeStruct::NativeLib(x) => x.property_access(property),
+            NativeStruct::Interval(x) => x.property_access(property),
         }
     }
 
