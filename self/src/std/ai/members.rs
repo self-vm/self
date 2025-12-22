@@ -448,8 +448,17 @@ pub fn chain(
             println!("AI.CHAIN <- {}", purpose);
         }
 
-        let master_link =
-            generate_link(&purpose, &end_condition, &UnfoldStore::new(), vm, debug).await?;
+        // get base libs
+        let stdlib_defs = get_stdlib_defs();
+        let master_link = generate_link(
+            &purpose,
+            &end_condition,
+            &UnfoldStore::new(),
+            vm,
+            &stdlib_defs,
+            debug,
+        )
+        .await?;
 
         // store all actions ref in a vector and return the
         // vector allocated heap ref
@@ -466,17 +475,13 @@ pub async fn generate_link(
     end_condition: &String,
     memory: &UnfoldStore,
     vm: &mut Vm,
+    available_libs: &Vec<String>,
     debug: bool,
 ) -> Result<Link, VMError> {
-    let stdlib_defs: Vec<String> = gen_native_modules_defs()
-        .iter()
-        .map(|nm| nm.to_string())
-        .collect();
-
     // we should try to avoid prompt injection
     // maybe using multiple prompts?
     let prompt = act_chain_prompt(
-        stdlib_defs,
+        available_libs,
         purpose,
         end_condition,
         &memory.prev_links,
@@ -619,6 +624,9 @@ pub fn unfold(
             .map(|v| v.as_native_struct(vm)?.as_link(vm))
             .collect::<Result<Vec<Link>, VMError>>()?;
 
+        // get base libs
+        let stdlib_defs = get_stdlib_defs();
+
         // start chain traversing, here occurs the magic
         if debug {
             println!("CHAIN.TRAVERSE <- {}", _self.to_string(vm));
@@ -721,8 +729,15 @@ pub fn unfold(
             memory.context.push(conclusion);
 
             // generate the next link
-            let next_link =
-                generate_link(&chain_purpose, &chain_end_condition, &memory, vm, debug).await?;
+            let next_link = generate_link(
+                &chain_purpose,
+                &chain_end_condition,
+                &memory,
+                vm,
+                &stdlib_defs,
+                debug,
+            )
+            .await?;
             if debug {
                 write_log(
                     "THOUGHT",
@@ -738,4 +753,11 @@ pub fn unfold(
 
         Ok(result)
     })
+}
+
+fn get_stdlib_defs() -> Vec<String> {
+    gen_native_modules_defs()
+        .iter()
+        .map(|nm| nm.to_string())
+        .collect()
 }

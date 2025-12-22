@@ -81,7 +81,7 @@ Instruction: {}",
 }
 
 pub fn act_chain_prompt(
-    stdlib_defs: Vec<String>,
+    stdlib_defs: &Vec<String>,
     purpose: &String,
     end_condition: &String,
     prev_links: &Vec<String>,
