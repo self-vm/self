@@ -312,101 +312,6 @@ pub fn do_fn(
     })
 }
 
-pub fn exec(
-    vm: &mut Vm,
-    _self: Option<Handle>,
-    params: Vec<Value>,
-    debug: bool,
-) -> BoxFuture<'_, Result<Value, VMError>> {
-    Box::pin(async move {
-        // resolve 'self'
-        let (_self, _self_ref) = if let Some(_this) = _self {
-            if let MemObject::NativeStruct(NativeStruct::Action(ns)) = vm.memory.resolve(&_this) {
-                (ns, _this)
-            } else {
-                unreachable!()
-            }
-        } else {
-            unreachable!()
-        };
-
-        if debug {
-            println!("ACTION <- {}.{}", _self.module, _self.member);
-        }
-        let native_module_type = if let Some(nmt) = get_native_module_type(&_self.module) {
-            nmt
-        } else {
-            return Err(error::throw(
-                VMErrorType::Action(ActionError::InvalidModule(_self.module.clone())),
-                vm,
-            ));
-        };
-        let native_module = generate_native_module(native_module_type);
-        let fields = native_module.1;
-        let member = if let Some(member) = fields.iter().find(|m| m.0 == _self.member) {
-            member
-        } else {
-            return Err(error::throw(
-                VMErrorType::Action(ActionError::InvalidMember {
-                    module: _self.module.clone(),
-                    member: _self.member.clone(),
-                }),
-                vm,
-            ));
-        };
-
-        match &member.1 {
-            MemObject::Function(f) => {
-                let mut consumer_param_counter = 0;
-                let resolved_action_params: Vec<Value> = _self
-                    .args
-                    .iter()
-                    .enumerate()
-                    .map(|(index, arg)| match arg.as_string_obj(vm).ok().as_deref() {
-                        Some(v) => {
-                            if v.contains("{self_runtime}") {
-                                let param = params
-                                    .get(consumer_param_counter)
-                                    .cloned()
-                                    .unwrap_or_else(|| {
-                                        eprintln!(
-                                            "action runtime defined param cannot be populated (index: {})",
-                                            index
-                                        );
-                                        Value::RawValue(RawValue::Nothing)
-                                    });
-                                consumer_param_counter += 1;
-                                param
-                            } else {
-                                arg.clone()
-                            }
-                        }
-                        _ => arg.clone(),
-                    })
-                    .collect();
-
-                let execution = vm
-                    .run_function(&f.clone(), Some(_self_ref), resolved_action_params, debug)
-                    .await;
-                if let Some(err) = execution.error {
-                    return Err(err);
-                }
-                if let Some(result) = execution.result {
-                    return Ok(result);
-                }
-                return Ok(Value::RawValue(RawValue::Nothing));
-            }
-            _ => {
-                // TODO: use self-vm errors system
-                // in principle this should not happen since
-                // to the AI should arrive only valid callable
-                // members from the stdlib modules
-                panic!("error, member is not callable");
-            }
-        }
-    })
-}
-
 // chain
 pub fn chain_obj() -> MemObject {
     MemObject::Function(Function::new(
@@ -672,12 +577,16 @@ pub fn unfold(
                 break;
             }
 
-            // check if the user, want to allow the action before
-            // performing. execute the callback before the action execution
-            // to allow the end of the chain manually based on some heuristics
+            // the action is performed by the user here we only
+            // check if "continue" property is true to continue
+            // and generate a new link.
             let link_handle = vm.memory.alloc(MemObject::NativeStruct(NativeStruct::Link(
                 links[links.len() - 1].clone(),
             )));
+
+            // before executind the unfold callback, lets check
+            // if we need to enter in <module session> mode
+
             let exec_result = vm
                 .run_function(&callback, None, vec![Value::Handle(link_handle)], debug)
                 .await;
@@ -754,6 +663,104 @@ pub fn unfold(
         Ok(result)
     })
 }
+
+// Action type methods
+pub fn exec(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> BoxFuture<'_, Result<Value, VMError>> {
+    Box::pin(async move {
+        // resolve 'self'
+        let (_self, _self_ref) = if let Some(_this) = _self {
+            if let MemObject::NativeStruct(NativeStruct::Action(ns)) = vm.memory.resolve(&_this) {
+                (ns, _this)
+            } else {
+                unreachable!()
+            }
+        } else {
+            unreachable!()
+        };
+
+        if debug {
+            println!("ACTION <- {}.{}", _self.module, _self.member);
+        }
+        let native_module_type = if let Some(nmt) = get_native_module_type(&_self.module) {
+            nmt
+        } else {
+            return Err(error::throw(
+                VMErrorType::Action(ActionError::InvalidModule(_self.module.clone())),
+                vm,
+            ));
+        };
+        let native_module = generate_native_module(native_module_type);
+        let fields = native_module.1;
+        let member = if let Some(member) = fields.iter().find(|m| m.0 == _self.member) {
+            member
+        } else {
+            return Err(error::throw(
+                VMErrorType::Action(ActionError::InvalidMember {
+                    module: _self.module.clone(),
+                    member: _self.member.clone(),
+                }),
+                vm,
+            ));
+        };
+
+        match &member.1 {
+            MemObject::Function(f) => {
+                let mut consumer_param_counter = 0;
+                let resolved_action_params: Vec<Value> = _self
+                    .args
+                    .iter()
+                    .enumerate()
+                    .map(|(index, arg)| match arg.as_string_obj(vm).ok().as_deref() {
+                        Some(v) => {
+                            if v.contains("{self_runtime}") {
+                                let param = params
+                                    .get(consumer_param_counter)
+                                    .cloned()
+                                    .unwrap_or_else(|| {
+                                        eprintln!(
+                                            "action runtime defined param cannot be populated (index: {})",
+                                            index
+                                        );
+                                        Value::RawValue(RawValue::Nothing)
+                                    });
+                                consumer_param_counter += 1;
+                                param
+                            } else {
+                                arg.clone()
+                            }
+                        }
+                        _ => arg.clone(),
+                    })
+                    .collect();
+
+                let execution = vm
+                    .run_function(&f.clone(), Some(_self_ref), resolved_action_params, debug)
+                    .await;
+                if let Some(err) = execution.error {
+                    return Err(err);
+                }
+                if let Some(result) = execution.result {
+                    return Ok(result);
+                }
+                return Ok(Value::RawValue(RawValue::Nothing));
+            }
+            _ => {
+                // TODO: use self-vm errors system
+                // in principle this should not happen since
+                // to the AI should arrive only valid callable
+                // members from the stdlib modules
+                panic!("error, member is not callable");
+            }
+        }
+    })
+}
+
+// utils functions
 
 fn get_stdlib_defs() -> Vec<String> {
     gen_native_modules_defs()
