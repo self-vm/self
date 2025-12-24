@@ -1,11 +1,12 @@
 use crate::{
     core::error::{self, type_errors, VMError, VMErrorType},
     std::{
-        ai::types::{Action, Chain, Link},
+        ai::types::{Action, Chain, Link, SessionEnd},
         mcp::types::{McpClient, McpTool},
         native::types::NativeLib,
         net::types::{NetServer, NetStream},
         schedule::types::Interval,
+        web::types::Browser,
     },
     types::Value,
     vm::Vm,
@@ -20,6 +21,7 @@ pub enum NativeStruct {
     Action(Action),
     Chain(Chain),
     Link(Link),
+    SessionEnd(SessionEnd),
     // mcp
     McpClient(McpClient),
     McpTool(McpTool),
@@ -27,6 +29,8 @@ pub enum NativeStruct {
     NativeLib(NativeLib),
     // schedule
     Interval(Interval),
+    // web
+    Browser(Browser),
 }
 
 impl NativeStruct {
@@ -37,10 +41,12 @@ impl NativeStruct {
             NativeStruct::Action(x) => x.to_string(vm),
             NativeStruct::Chain(x) => x.to_string(vm),
             NativeStruct::Link(x) => x.to_string(vm),
+            NativeStruct::SessionEnd(x) => x.to_string(),
             NativeStruct::McpClient(x) => x.to_string(),
             NativeStruct::McpTool(x) => x.to_string(),
             NativeStruct::NativeLib(x) => x.to_string(vm),
             NativeStruct::Interval(x) => x.to_string(vm),
+            NativeStruct::Browser(x) => x.to_string(vm),
         }
     }
 
@@ -54,10 +60,20 @@ impl NativeStruct {
             NativeStruct::Action(x) => x.property_access(property),
             NativeStruct::Chain(x) => x.shape.property_access(property),
             NativeStruct::Link(x) => x.shape.property_access(property),
+            NativeStruct::SessionEnd(x) => x.property_access(property),
             NativeStruct::McpClient(x) => x.shape.property_access(property),
             NativeStruct::McpTool(x) => x.shape.property_access(property),
             NativeStruct::NativeLib(x) => x.property_access(property),
             NativeStruct::Interval(x) => x.property_access(property),
+            NativeStruct::Browser(x) => x.property_access(property),
+        }
+    }
+
+    // here goes the structs that exposes their internal members
+    pub fn get_struct_defs(&self, name: &str) -> Option<String> {
+        match self {
+            NativeStruct::Browser(x) => Some(x.get_defs(name).to_string()),
+            _ => None,
         }
     }
 

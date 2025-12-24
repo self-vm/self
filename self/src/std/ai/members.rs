@@ -623,6 +623,60 @@ pub fn unfold(
                 ));
             };
 
+            // check if the chain should enter in session mode based
+            // on the output of the last executed action and generate
+            // the available libs members based on the mode and set
+            // the session mode on the chain memory
+            let (libs_defs, session_mode) = if memory.session {
+                // if already in session mode
+                if let Value::Handle(h) = conclusion.clone() {
+                    if let MemObject::NativeStruct(ns) = vm.memory.resolve(&h) {
+                        match ns.property_access("__is_session_ended") {
+                            Some(v) => {
+                                if let Ok(ended) = v.as_bool(vm) {
+                                    if ended {
+                                        memory.session = false;
+                                        (&stdlib_defs, false)
+                                    } else {
+                                        (&memory.lib_defs, true)
+                                    }
+                                } else {
+                                    (&memory.lib_defs, true)
+                                }
+                            }
+                            None => (&memory.lib_defs, true),
+                        }
+                    } else {
+                        (&memory.lib_defs, true)
+                    }
+                } else {
+                    (&memory.lib_defs, true)
+                }
+            } else {
+                // in normal mode
+                if let Some(session) = enter_session_mode(vm, &conclusion) {
+                    let (instance_name, def) = session;
+                    memory.lib_defs = vec![def];
+                    memory.session = true;
+                    // set session handle in the callstack scope to
+                    // resolve Actions calls inside the session
+                    // TODO: we should remove from the frame eventually (probably)
+                    vm.call_stack
+                        .put_to_frame(instance_name.to_string(), conclusion.clone());
+                    (&memory.lib_defs, true)
+                } else {
+                    memory.session = false;
+                    (&stdlib_defs, false)
+                }
+            };
+
+            if debug {
+                println!(
+                    "CHAIN MODE: {:#?}",
+                    if session_mode { "SESSION" } else { "NORMAL" }
+                );
+            }
+
             // process the current link
             let current_def = current_link
                 .shape
@@ -643,7 +697,7 @@ pub fn unfold(
                 &chain_end_condition,
                 &memory,
                 vm,
-                &stdlib_defs,
+                &libs_defs,
                 debug,
             )
             .await?;
@@ -686,32 +740,30 @@ pub fn exec(
         if debug {
             println!("ACTION <- {}.{}", _self.module, _self.member);
         }
-        let native_module_type = if let Some(nmt) = get_native_module_type(&_self.module) {
-            nmt
-        } else {
-            return Err(error::throw(
-                VMErrorType::Action(ActionError::InvalidModule(_self.module.clone())),
-                vm,
-            ));
-        };
-        let native_module = generate_native_module(native_module_type);
-        let fields = native_module.1;
-        let member = if let Some(member) = fields.iter().find(|m| m.0 == _self.member) {
-            member
-        } else {
-            return Err(error::throw(
-                VMErrorType::Action(ActionError::InvalidMember {
-                    module: _self.module.clone(),
-                    member: _self.member.clone(),
-                }),
-                vm,
-            ));
-        };
+        let native_module_type = get_native_module_type(&_self.module);
 
-        match &member.1 {
-            MemObject::Function(f) => {
-                let mut consumer_param_counter = 0;
-                let resolved_action_params: Vec<Value> = _self
+        // if the module cannot be resolved with the stdlib modules check
+        // the callstack and try to find the resolve the name and call
+        // the member of the resolved value
+        if let Some(native_module_type) = native_module_type {
+            let native_module = generate_native_module(native_module_type);
+            let fields = native_module.1;
+            let member = if let Some(member) = fields.iter().find(|m| m.0 == _self.member) {
+                member
+            } else {
+                return Err(error::throw(
+                    VMErrorType::Action(ActionError::InvalidMember {
+                        module: _self.module.clone(),
+                        member: _self.member.clone(),
+                    }),
+                    vm,
+                ));
+            };
+
+            match &member.1 {
+                MemObject::Function(f) => {
+                    let mut consumer_param_counter = 0;
+                    let resolved_action_params: Vec<Value> = _self
                     .args
                     .iter()
                     .enumerate()
@@ -738,29 +790,86 @@ pub fn exec(
                     })
                     .collect();
 
-                let execution = vm
-                    .run_function(&f.clone(), Some(_self_ref), resolved_action_params, debug)
-                    .await;
-                if let Some(err) = execution.error {
-                    return Err(err);
+                    let execution = vm
+                        .run_function(&f.clone(), Some(_self_ref), resolved_action_params, debug)
+                        .await;
+                    if let Some(err) = execution.error {
+                        return Err(err);
+                    }
+                    if let Some(result) = execution.result {
+                        return Ok(result);
+                    }
+                    return Ok(Value::RawValue(RawValue::Nothing));
                 }
-                if let Some(result) = execution.result {
-                    return Ok(result);
+                _ => {
+                    // TODO: use self-vm errors system
+                    // in principle this should not happen since
+                    // to the AI should arrive only valid callable
+                    // members from the stdlib modules
+                    panic!("error, member is not callable");
                 }
-                return Ok(Value::RawValue(RawValue::Nothing));
             }
-            _ => {
-                // TODO: use self-vm errors system
-                // in principle this should not happen since
-                // to the AI should arrive only valid callable
-                // members from the stdlib modules
-                panic!("error, member is not callable");
-            }
+        } else {
+            if let Some(struct_handle) = vm.call_stack.resolve(&_self.module) {
+                if let Value::Handle(h) = struct_handle {
+                    let resolved_struct = vm.memory.resolve(&h).as_native_struct(vm)?;
+                    if let Some(member) = resolved_struct.property_access(&_self.member) {
+                        let function = member.as_function_obj(vm)?;
+                        let execution = vm
+                            .run_function(&function, Some(h), _self.args.clone(), debug)
+                            .await;
+                        if let Some(err) = execution.error {
+                            return Err(err);
+                        }
+                        if let Some(result) = execution.result {
+                            return Ok(result);
+                        }
+                        return Ok(Value::RawValue(RawValue::Nothing));
+                    }
+                }
+            };
+
+            panic!("cannot resolve exec of {}", _self.module);
         }
     })
 }
 
 // utils functions
+fn enter_session_mode(vm: &mut Vm, conclusion: &Value) -> Option<(String, String)> {
+    let handle = match conclusion {
+        Value::Handle(h) => h,
+        _ => return None,
+    };
+
+    let ns = match vm.memory.resolve(&handle) {
+        MemObject::NativeStruct(ns) => ns,
+        _ => return None,
+    };
+
+    // if is_sessionable field exists and it's true, enter session mode
+    let is_sessionable = match ns.property_access("is_sessionable") {
+        Some(v) => {
+            if let Ok(v) = v.as_bool(vm) {
+                v
+            } else {
+                return None;
+            }
+        } // aquí validas tipo
+        None => return None,
+    };
+
+    if !is_sessionable {
+        return None;
+    }
+
+    // if no defs defined on the struct avoid session mode
+    let instance_name = "random_generated".to_string();
+    let defs = match ns.get_struct_defs(&instance_name) {
+        Some(d) => d,
+        None => return None,
+    };
+    return Some((instance_name, defs));
+}
 
 fn get_stdlib_defs() -> Vec<String> {
     gen_native_modules_defs()

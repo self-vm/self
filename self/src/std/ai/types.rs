@@ -168,10 +168,34 @@ impl Chain {
     }
 }
 
+// SessionEnd struct works for ending
+// the session mode of a chain
+#[derive(Debug, Clone)]
+pub struct SessionEnd {}
+
+impl SessionEnd {
+    pub fn new() -> SessionEnd {
+        SessionEnd {}
+    }
+
+    pub fn to_string(&self) -> String {
+        "SessionEnd".to_string()
+    }
+
+    pub fn property_access(&self, property: &str) -> Option<Value> {
+        match property {
+            "__is_session_ended" => Some(Value::RawValue(RawValue::Bool(Bool::new(true)))),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct UnfoldStore {
     pub prev_links: Vec<String>,
     pub context: Vec<Value>,
+    pub session: bool,
+    pub lib_defs: Vec<String>,
 }
 
 impl UnfoldStore {
@@ -179,6 +203,8 @@ impl UnfoldStore {
         UnfoldStore {
             prev_links: vec![],
             context: vec![],
+            session: false,
+            lib_defs: vec![],
         }
     }
 }

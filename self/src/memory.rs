@@ -236,6 +236,19 @@ impl MemObject {
         }
     }
 
+    pub fn as_native_struct(&self, vm: &Vm) -> Result<&NativeStruct, VMError> {
+        match self {
+            MemObject::NativeStruct(x) => Ok(x),
+            _ => Err(error::throw(
+                error::VMErrorType::TypeMismatch {
+                    expected: "NativeStruct".to_string(),
+                    received: self.get_type(),
+                },
+                vm,
+            )),
+        }
+    }
+
     pub fn as_struct_literal(&self, vm: &Vm) -> Result<StructLiteral, VMError> {
         match self {
             MemObject::StructLiteral(x) => Ok(x.clone()),
