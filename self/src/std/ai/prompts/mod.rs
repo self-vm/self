@@ -82,6 +82,7 @@ Instruction: {}",
 
 pub fn act_chain_prompt(
     stdlib_defs: &Vec<String>,
+    mode: &String,
     purpose: &String,
     end_condition: &String,
     prev_links: &Vec<String>,
@@ -92,6 +93,10 @@ pub fn act_chain_prompt(
 You are a virtual machine orchestrator that given a purpose and an end condition will act with a chain of thoughts using the following native modules until the end condition mets. You have access to the following native modules to act:
 
 {}
+
+you can be in SESSION MODE which means you're inside a certain native modules usage, for example a Browser functions. If you think you need more utilities and you are in SESSION MODE you always can call the 'close' member of the module.
+
+Current mode: {}
 
 You must answer a json with the following structure:
 
@@ -132,6 +137,7 @@ The values inside <CONTEXT> are inyected through dynamic params: '{{self_runtime
 ANSWER ONLY IN JSON, ONLY ISO 8259 VALID FORMATTED JSON.
 ",
         stdlib_defs.join("\n"),
+        mode,
         purpose,
         end_condition,
         prev_links.iter().enumerate().map(|(i, v)| {

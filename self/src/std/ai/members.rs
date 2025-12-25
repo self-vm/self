@@ -361,6 +361,7 @@ pub fn chain(
             &UnfoldStore::new(),
             vm,
             &stdlib_defs,
+            "NORMAL MODE".to_string(),
             debug,
         )
         .await?;
@@ -381,12 +382,14 @@ pub async fn generate_link(
     memory: &UnfoldStore,
     vm: &mut Vm,
     available_libs: &Vec<String>,
+    mode: String,
     debug: bool,
 ) -> Result<Link, VMError> {
     // we should try to avoid prompt injection
     // maybe using multiple prompts?
     let prompt = act_chain_prompt(
         available_libs,
+        &mode,
         purpose,
         end_condition,
         &memory.prev_links,
@@ -698,6 +701,11 @@ pub fn unfold(
                 &memory,
                 vm,
                 &libs_defs,
+                if session_mode {
+                    "SESSION MODE".to_string()
+                } else {
+                    "NORMAL MODE".to_string()
+                },
                 debug,
             )
             .await?;
