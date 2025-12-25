@@ -35,6 +35,10 @@ impl StructLiteral {
         self.fields.get(property).cloned()
     }
 
+    pub fn property_set(&mut self, property: &str, value: Value) {
+        self.fields.insert(property.to_string(), value);
+    }
+
     pub fn to_string(&self) -> String {
         format!("[instance] {}", self.struct_type)
     }

@@ -191,21 +191,54 @@ impl SessionEnd {
 }
 
 #[derive(Debug)]
+pub struct UnfoldStoreEntry {
+    pub origin_thought: String,
+    pub value: Value,
+}
+
+#[derive(Debug)]
 pub struct UnfoldStore {
-    pub prev_links: Vec<String>,
-    pub context: Vec<Value>,
+    pub context: HashMap<String, UnfoldStoreEntry>,
     pub session: bool,
     pub lib_defs: Vec<String>,
+    next_id: usize,
 }
 
 impl UnfoldStore {
     pub fn new() -> UnfoldStore {
         UnfoldStore {
-            prev_links: vec![],
-            context: vec![],
+            context: HashMap::new(),
             session: false,
             lib_defs: vec![],
+            next_id: 0,
         }
+    }
+
+    pub fn insert_entry(&mut self, origin_thought: String, value: Value) {
+        let identifier = format!("variable_{}", self.next_id);
+        self.next_id += 1;
+        let entry = UnfoldStoreEntry {
+            origin_thought,
+            value,
+        };
+        self.context.insert(identifier, entry);
+    }
+
+    pub fn context_to_string_vec(&mut self, vm: &Vm) -> Vec<String> {
+        let mut strings = vec![];
+        for (key, entry) in &self.context {
+            strings.push(format!(
+                "variable_name: {key}\nthought: {} executed with result in value.\nvalue: {}",
+                entry.origin_thought,
+                entry.value.to_string(vm)
+            ));
+        }
+
+        strings
+    }
+
+    pub fn resolve(&self, variable_name: &str) -> Option<&UnfoldStoreEntry> {
+        self.context.get(variable_name)
     }
 }
 

@@ -358,7 +358,7 @@ pub fn chain(
         let master_link = generate_link(
             &purpose,
             &end_condition,
-            &UnfoldStore::new(),
+            &vec![],
             vm,
             &stdlib_defs,
             "NORMAL MODE".to_string(),
@@ -379,7 +379,7 @@ pub fn chain(
 pub async fn generate_link(
     purpose: &String,
     end_condition: &String,
-    memory: &UnfoldStore,
+    context: &Vec<String>,
     vm: &mut Vm,
     available_libs: &Vec<String>,
     mode: String,
@@ -387,18 +387,7 @@ pub async fn generate_link(
 ) -> Result<Link, VMError> {
     // we should try to avoid prompt injection
     // maybe using multiple prompts?
-    let prompt = act_chain_prompt(
-        available_libs,
-        &mode,
-        purpose,
-        end_condition,
-        &memory.prev_links,
-        &memory
-            .context
-            .iter()
-            .map(|v| v.to_string(vm))
-            .collect::<Vec<String>>(),
-    );
+    let prompt = act_chain_prompt(available_libs, &mode, purpose, end_condition, context);
 
     if debug {
         write_log("PROMPT", &prompt);
@@ -641,19 +630,19 @@ pub fn unfold(
                                         memory.session = false;
                                         (&stdlib_defs, false)
                                     } else {
-                                        (&memory.lib_defs, true)
+                                        (&memory.lib_defs.clone(), true)
                                     }
                                 } else {
-                                    (&memory.lib_defs, true)
+                                    (&memory.lib_defs.clone(), true)
                                 }
                             }
-                            None => (&memory.lib_defs, true),
+                            None => (&memory.lib_defs.clone(), true),
                         }
                     } else {
-                        (&memory.lib_defs, true)
+                        (&memory.lib_defs.clone(), true)
                     }
                 } else {
-                    (&memory.lib_defs, true)
+                    (&memory.lib_defs.clone(), true)
                 }
             } else {
                 // in normal mode
@@ -666,7 +655,7 @@ pub fn unfold(
                     // TODO: we should remove from the frame eventually (probably)
                     vm.call_stack
                         .put_to_frame(instance_name.to_string(), conclusion.clone());
-                    (&memory.lib_defs, true)
+                    (&memory.lib_defs.clone(), true)
                 } else {
                     memory.session = false;
                     (&stdlib_defs, false)
@@ -687,18 +676,17 @@ pub fn unfold(
                 .unwrap_or(Value::RawValue(RawValue::Nothing))
                 .as_string_obj(vm)?;
 
-            // the context should be a store during the whole execution,
-            // something like a hashmap. that has steps, and its conclusions
-            // traverse_context.push(conclusion);
-            // for the moment lets use only each link def
-            memory.prev_links.push(current_def);
-            memory.context.push(conclusion);
+            // the context is a store during the whole execution,
+            // a hashmap that has steps, and its conclusions
+            // a.k.a variables of the chain
+            memory.insert_entry(current_def, conclusion);
+            let context = memory.context_to_string_vec(vm);
 
             // generate the next link
-            let next_link = generate_link(
+            let mut next_link = generate_link(
                 &chain_purpose,
                 &chain_end_condition,
-                &memory,
+                &context,
                 vm,
                 &libs_defs,
                 if session_mode {
@@ -719,6 +707,41 @@ pub fn unfold(
                         .as_string_obj(vm)?,
                 );
             }
+
+            // we explore the links looking for
+            // runtime defined variables and resolving
+            // their actual values in memory
+            if let Some(a) = next_link.shape.property_access("action") {
+                let mut action = a.as_native_struct(vm)?.as_action(vm)?;
+                let mut resolved_args = vec![];
+                for arg in action.args {
+                    if let Value::RawValue(RawValue::Utf8(argv)) = &arg {
+                        let argv = &argv.value;
+                        if argv.starts_with("{variable_") && argv.ends_with('}') {
+                            // resolve arg
+                            if let Some(memory_entry) = memory.resolve(&argv[1..argv.len() - 1]) {
+                                resolved_args.push(memory_entry.value.clone());
+                                continue;
+                            }
+                        }
+                    }
+
+                    resolved_args.push(arg);
+                }
+
+                // free previous action and set the new
+                action.args = resolved_args;
+                let new_action_handle = vm
+                    .memory
+                    .alloc(MemObject::NativeStruct(NativeStruct::Action(action)));
+                next_link
+                    .shape
+                    .property_set("action", Value::Handle(new_action_handle));
+
+                let prev_action_handle = a.as_handle()?;
+                vm.memory.free(&prev_action_handle);
+            }
+
             links.push(next_link);
         }
 

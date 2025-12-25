@@ -68,7 +68,7 @@ You must respond to the following instruction with a list of JSON objects, where
 
 - 'module': the name of the module from the list above,
 - 'member': the specific function name to call (from the members),
-- 'params': an array of arguments. If you cannot infer the parameter or the parameter value is dynamic set to {{self_runtime}} string value
+- 'params': an array of arguments. If you cannot infer the parameter or the parameter value is dynamic set to '{{<variable_name>}}' string value
 
 You must only use the modules and members listed above. Do not invent anything.
 
@@ -85,7 +85,6 @@ pub fn act_chain_prompt(
     mode: &String,
     purpose: &String,
     end_condition: &String,
-    prev_links: &Vec<String>,
     context: &Vec<String>,
 ) -> String {
     return format!(
@@ -94,9 +93,9 @@ You are a virtual machine orchestrator that given a purpose and an end condition
 
 {}
 
-you can be in SESSION MODE which means you're inside a certain native modules usage, for example a Browser functions. If you think you need more utilities and you are in SESSION MODE you always can call the 'close' member of the module.
-
 Current mode: {}
+While in SESSION MODE, access to native modules is restricted.
+If you need additional utilities, call the module’s close method to exit SESSION MODE and regain access to all native modules.
 
 You must answer a json with the following structure:
 
@@ -109,9 +108,9 @@ You must answer a json with the following structure:
     }}
 }}
 
-if a param is dynamic use the string '{{self_runtime}}' for the runtime defined vars. 
-dynamic params are a string with '{{self_runtime}}' with nothing more.
-dynamic params value: \"{{self_runtime}}\" (with no more data on the string)
+if a param is dynamic use the string of the '{{<variable_name>}}' getted from the context. 
+dynamic params are a string with the name of the variable with nothing more.
+dynamic params value: \"{{<variable_name>}}\" (with no more data on the string)
 
 You must only use the modules and members listed above. Do not invent anything.
 
@@ -132,7 +131,7 @@ Previous executed links definitions and Available context of the actual chain:
 {}
 </CONTEXT>
 
-The values inside <CONTEXT> are inyected through dynamic params: '{{self_runtime}}'
+The values inside <CONTEXT> are inyected through dynamic params: '{{variable_X}}'
 
 ANSWER ONLY IN JSON, ONLY ISO 8259 VALID FORMATTED JSON.
 ",
@@ -140,8 +139,6 @@ ANSWER ONLY IN JSON, ONLY ISO 8259 VALID FORMATTED JSON.
         mode,
         purpose,
         end_condition,
-        prev_links.iter().enumerate().map(|(i, v)| {
-            return format!("{}: {{\n{}\n}}", v, context[i])
-        }).collect::<Vec<String>>().join("\n\n"),
+        context.iter().map(|c| format!("\t<VARIABLE>\n{}\n\t</VARIABLE>", c)).collect::<Vec<String>>().join("\n\n"),
     );
 }
