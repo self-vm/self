@@ -1,4 +1,0 @@
-[[functions]]
-name = "hi"
-runtime = "/Users/noreplydev/.nvm/versions/node/v20.17.0/bin/node"
-script = "wforeigns/hi.js"

@@ -17,6 +17,7 @@ pub enum Command {
     Logo(Logo),
     New(New),
     Compile(Compile),
+    Raw,
 }
 
 impl Command {
@@ -28,11 +29,7 @@ impl Command {
             return Command::cmd_from_str(command.as_str(), remaining_args.to_vec());
         } else {
             // print help message instead of error
-            error::throw(
-                ErrorType::EgoUsageError,
-                "a command is required",
-                None,
-            );
+            error::throw(ErrorType::EgoUsageError, "a command is required", None);
             std::process::exit(1); // to avoid types error
         };
     }
@@ -42,6 +39,7 @@ impl Command {
             "logo" => Command::Logo(Logo::new(args)),
             "new" => Command::New(New::new(args)),
             "compile" => Command::Compile(Compile::new(args)),
+            "ping" => Command::Raw,
             _ => Command::Run(Run::new(
                 [command.to_string()]
                     .into_iter()
@@ -56,6 +54,9 @@ impl Command {
             Command::Logo(v) => v.exec(),
             Command::New(v) => v.exec(),
             Command::Compile(v) => v.exec(),
+            Command::Raw => {
+                println!("pong!")
+            }
         }
     }
 }
