@@ -403,18 +403,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
-name = "ego"
-version = "0.0.0-alpha.0.1"
-dependencies = [
- "lazy_static",
- "regex",
- "self-vm",
- "tokio",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -424,8 +412,8 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 name = "emulator"
 version = "0.1.0"
 dependencies = [
- "ego",
  "self-vm",
+ "selfcli",
  "tokio",
 ]
 
@@ -1499,6 +1487,18 @@ dependencies = [
  "tokio",
  "toml",
  "webpki-roots 0.26.11",
+]
+
+[[package]]
+name = "selfcli"
+version = "0.0.0-alpha.0.1"
+dependencies = [
+ "lazy_static",
+ "regex",
+ "self-vm",
+ "tokio",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

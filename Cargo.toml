@@ -1,2 +1,2 @@
 [workspace]
-members = ["ego", "emulator", "self"]
+members = ["cli", "core", "emulator"]

@@ -181,6 +181,8 @@ fn open(
         }
 
         let url = &params[0].as_string_obj(vm)?;
+        println!("url: {:#?}", url);
+        println!("params: {:#?}", params);
 
         let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
         _self
