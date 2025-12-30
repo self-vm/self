@@ -4,8 +4,8 @@ use crate::{
     memory::MemObject,
     std::{
         fs::members::{
-            delete_obj, read_dir_def, read_dir_obj, read_file_def, read_file_obj, write_file_def,
-            write_file_obj,
+            delete_obj, is_file_def, is_file_obj, read_dir_def, read_dir_obj, read_file_def,
+            read_file_obj, write_file_def, write_file_obj,
         },
         NativeModuleDef,
     },
@@ -18,12 +18,18 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     fields.push(("read_dir".to_string(), read_dir_obj()));
     fields.push(("write_file".to_string(), write_file_obj()));
     fields.push(("delete".to_string(), delete_obj()));
+    fields.push(("is_file".to_string(), is_file_obj()));
 
     ("fs".to_string(), fields)
 }
 
 pub fn generate_mod_def() -> NativeModuleDef {
-    let members = vec![write_file_def(), read_file_def(), read_dir_def()];
+    let members = vec![
+        write_file_def(),
+        read_file_def(),
+        read_dir_def(),
+        is_file_def(),
+    ];
 
     NativeModuleDef {
         module: "fs".to_string(),

@@ -301,3 +301,48 @@ pub fn delete(
         )),
     }
 }
+
+// is_file check a path to see if it's a path
+pub fn is_file_def() -> NativeMember {
+    NativeMember {
+        name: "is_file".to_string(),
+        description: "check if the given path is a file".to_string(),
+        params: Some(vec!["path(string)".to_string()]),
+    }
+}
+
+pub fn is_file_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "is_file".to_string(),
+        vec!["path".to_string()],
+        Engine::Native(is_file),
+    ))
+}
+
+pub fn is_file(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> Result<Value, VMError> {
+    let path = params[0].as_string_obj(vm)?;
+    let path_obj = Path::new(&path);
+    if !path_obj.exists() {
+        return Err(error::throw(
+            VMErrorType::Fs(FsError::FileNotFound(format!("{}", path))),
+            vm,
+        ));
+    }
+
+    let path_is_file = path_obj.is_file();
+    if debug {
+        println!("IS_FILE <- {}", path);
+        println!("IS_FILE -> {}", path_is_file);
+    }
+
+    if path_is_file {
+        return Ok(Value::RawValue(RawValue::Bool(Bool::new(true))));
+    } else {
+        return Ok(Value::RawValue(RawValue::Bool(Bool::new(false))));
+    }
+}
