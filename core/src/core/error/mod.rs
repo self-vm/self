@@ -77,6 +77,17 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
                 "Invalid args count".to_string(),
                 format!("expected {}, received {}", expected, received),
             ),
+            TypeError::InvalidFunctionCall {
+                function,
+                expected,
+                received,
+            } => (
+                "Invalid function call".to_string(),
+                format!(
+                    "'{}' function expected {} params, received {}",
+                    function, expected, received
+                ),
+            ),
             TypeError::InvalidTypeUnwrap { expected, received } => (
                 "Invalid type unwrap".to_string(),
                 format!("expected {}, received {}", expected, received),

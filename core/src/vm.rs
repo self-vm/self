@@ -2,6 +2,7 @@ use futures::future::BoxFuture;
 use tokio::sync::mpsc;
 
 use crate::core::error::struct_errors::StructError;
+use crate::core::error::type_errors::TypeError;
 use crate::core::error::InvalidBinaryOperation;
 use crate::core::error::VMErrorType;
 use crate::core::execution::VMExecutionResult;
@@ -1387,13 +1388,13 @@ impl Vm {
             }
             Engine::Native(native) => {
                 if args.len() < func.parameters.len() {
-                    // TODO: use self-vm errors system
-                    panic!(
-                        "function '{}' requires {} parameters, provided {}",
-                        func.identifier,
-                        func.parameters.len(),
-                        args.len()
-                    )
+                    let error = VMErrorType::TypeError(TypeError::InvalidFunctionCall {
+                        function: func.identifier.clone(),
+                        expected: func.parameters.len() as u32,
+                        received: args.len() as u32,
+                    });
+
+                    return VMExecutionResult::terminate_with_errors(error, self);
                 }
                 let execution_result = native(self, caller, args, debug);
                 if let Ok(result) = execution_result {
