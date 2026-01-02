@@ -3,6 +3,24 @@ self
 self is a virtual machine with native AI integration at the ISA and standard library level.
 
 
+stdlib
+-----
+this are the current available native modules.
+ - ai
+ - env
+ - fs
+ - http
+ - io
+ - native
+ - net
+ - os
+ - path
+ - schedule
+ - self
+ - web
+
+
+
 build
 -----
 
