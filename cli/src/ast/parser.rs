@@ -1461,7 +1461,14 @@ impl Module {
         let mut closed = false;
 
         // first we look at , or } to allow "{}" objects
-        while self.is_peekable() {
+        // check for closing '}' or the ',' after field
+        let next = self.unsafe_peek();
+        if LexerTokenType::CloseCurlyBrace == next.token_type {
+            closed = true;
+            self.next();
+        };
+
+        while self.is_peekable() && !closed {
             // consume identifier
             let token = self.peek("<Identifier>");
             if token.token_type != LexerTokenType::Identifier {
