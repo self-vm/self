@@ -1,5 +1,6 @@
 pub mod action_errors;
 pub mod ai_errors;
+pub mod byte_errors;
 pub mod fs_errors;
 pub mod memory_errors;
 pub mod net_errors;
@@ -9,7 +10,7 @@ pub mod type_errors;
 
 use crate::{
     core::error::{
-        action_errors::ActionError, ai_errors::AIError, fs_errors::FsError,
+        action_errors::ActionError, ai_errors::AIError, byte_errors::ByteError, fs_errors::FsError,
         memory_errors::MemoryError, net_errors::NetErrors, os_errors::OsError,
         struct_errors::StructError, type_errors::TypeError,
     },
@@ -32,6 +33,7 @@ pub enum VMErrorType {
     Fs(FsError),
     Os(OsError),
     AI(AIError),
+    Byte(ByteError),
     Action(ActionError),
     Net(NetErrors),
     Struct(StructError),
@@ -141,6 +143,12 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
             AIError::AIActionForcedAbort(s) => {
                 ("AI action forced abort".to_string(), format!("{}", s))
             }
+        },
+        VMErrorType::Byte(b) => match b {
+            ByteError::OutOfBounds { received } => (
+                "Byte value out of bounds".to_string(),
+                format!("value {} is out of 0-255 range", received),
+            ),
         },
         VMErrorType::Action(a) => match a {
             ActionError::InvalidModule(s) => (

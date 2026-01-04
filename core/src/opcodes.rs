@@ -131,6 +131,7 @@ pub enum DataType {
     Nothing,
     Vector,
     Bool,
+    Byte,
     StructLiteral,
     Lambda,
     Unknown,
@@ -150,6 +151,7 @@ impl DataType {
             0x08 => DataType::StructLiteral,
             0x09 => DataType::Vector,
             0x0a => DataType::Lambda,
+            0x0b => DataType::Byte,
             _ => DataType::Unknown,
         }
     }
@@ -167,6 +169,7 @@ impl DataType {
             DataType::Nothing => "nothing",
             DataType::Vector => "vector",
             DataType::Lambda => "lambda",
+            DataType::Byte => "byte",
             DataType::Unknown => "unknown",
         }
     }
@@ -182,6 +185,7 @@ impl PartialEq for DataType {
             (DataType::F64, DataType::F64) => true,
             (DataType::Utf8, DataType::Utf8) => true,
             (DataType::Bool, DataType::Bool) => true,
+            (DataType::Byte, DataType::Byte) => true,
             (DataType::Nothing, DataType::Nothing) => true,
             (DataType::Vector, DataType::Vector) => true,
             _ => false,

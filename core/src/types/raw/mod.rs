@@ -1,4 +1,5 @@
 pub mod bool;
+pub mod byte;
 pub mod f64;
 pub mod i32;
 pub mod i64;
@@ -14,7 +15,12 @@ use u32::U32;
 use u64::U64;
 use utf8::Utf8;
 
-use crate::opcodes::DataType;
+use crate::{
+    core::error::{self, VMError, VMErrorType},
+    opcodes::DataType,
+    types::raw::byte::Byte,
+    vm::Vm,
+};
 
 #[derive(Debug, Clone)]
 pub enum RawValue {
@@ -25,6 +31,7 @@ pub enum RawValue {
     F64(F64),
     Utf8(Utf8),
     Bool(Bool),
+    Byte(Byte),
     Nothing,
 }
 
@@ -38,6 +45,7 @@ impl RawValue {
             RawValue::F64(_) => DataType::F64,
             RawValue::Utf8(_) => DataType::Utf8,
             RawValue::Bool(_) => DataType::Bool,
+            RawValue::Byte(_) => DataType::Byte,
             RawValue::Nothing => DataType::Nothing,
         }
     }
@@ -51,6 +59,7 @@ impl RawValue {
             RawValue::F64(_) => "F64".to_string(),
             RawValue::Utf8(_) => "UTF8".to_string(),
             RawValue::Bool(_) => "BOOL".to_string(),
+            RawValue::Byte(_) => "BYTE".to_string(),
             RawValue::Nothing => "NOTHING".to_string(),
         }
     }
@@ -64,20 +73,24 @@ impl RawValue {
             RawValue::F64(x) => x.value.to_string(),
             RawValue::Utf8(x) => x.value.to_string(),
             RawValue::Bool(x) => x.value.to_string(),
+            RawValue::Byte(x) => x.value.to_string(),
             RawValue::Nothing => "nothing".to_string(),
         }
     }
 
-    pub fn as_isize(&self) -> Option<isize> {
+    pub fn as_isize(&self, vm: &Vm) -> Result<isize, VMError> {
         match self {
-            RawValue::I32(x) => Some(x.value as isize),
-            RawValue::I64(x) => Some(x.value as isize),
-            RawValue::U32(_) => None,
-            RawValue::U64(_) => None,
-            RawValue::F64(_) => None,
-            RawValue::Utf8(_) => None,
-            RawValue::Bool(_) => None,
-            RawValue::Nothing => None,
+            RawValue::I32(x) => Ok(x.value as isize),
+            RawValue::I64(x) => Ok(x.value as isize),
+            any => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "u32 or u64".to_string(),
+                        received: any.get_type_string(),
+                    },
+                    vm,
+                ));
+            }
         }
     }
 
@@ -90,6 +103,7 @@ impl RawValue {
             RawValue::F64(_) => None,
             RawValue::Utf8(_) => None,
             RawValue::Bool(_) => None,
+            RawValue::Byte(_) => None,
             RawValue::Nothing => None,
         }
     }

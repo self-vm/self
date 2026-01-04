@@ -16,6 +16,7 @@ use crate::memory::MemoryManager;
 use crate::opcodes::DataType;
 use crate::opcodes::Opcode;
 use crate::std::bootstrap_default_lib;
+use crate::std::builtin_functions;
 use crate::std::heap_utils::put_string;
 use crate::std::vector;
 use crate::std::{generate_native_module, get_native_module_type};
@@ -86,7 +87,8 @@ impl Vm {
             println!("-");
         }
 
-        // load builtin handlers
+        // PRELUDE
+        // load builtin handlers (.map, .len)
         let raw_handlers = bootstrap_default_lib();
         let mut handlers = HashMap::new();
         for (handler_name, handler_obj) in raw_handlers {
@@ -95,6 +97,15 @@ impl Vm {
         }
         self.handlers = handlers;
 
+        // load builtin functions (Byte())
+        let builtin = builtin_functions();
+        for (function_name, function) in builtin {
+            let obj_handle = self.memory.alloc(MemObject::Function(function));
+            self.call_stack
+                .put_to_frame(function_name, Value::Handle(obj_handle));
+        }
+
+        // RUN
         self.run_bytecode(debug).await
     }
 
@@ -618,6 +629,7 @@ impl Vm {
                                                 RawValue::U32(v) => "number".to_string(),
                                                 RawValue::U64(v) => "number".to_string(),
                                                 RawValue::F64(v) => "number".to_string(),
+                                                RawValue::Byte(v) => "byte".to_string(),
                                                 RawValue::Nothing => "nothing".to_string(),
                                             },
                                         };

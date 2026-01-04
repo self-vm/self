@@ -1,6 +1,7 @@
-use crate::memory::MemObject;
+use crate::{memory::MemObject, types::object::func::Function};
 
 pub mod ai;
+pub mod bytes;
 pub mod env;
 pub mod fs;
 pub mod heap_utils;
@@ -78,6 +79,11 @@ pub fn bootstrap_default_lib() -> Vec<(String, MemObject)> {
     let mut default_lib = vec![];
     default_lib.extend(vector::init_lib());
     default_lib
+}
+
+// generate builtin functions
+pub fn builtin_functions() -> Vec<(String, Function)> {
+    vec![("Byte".to_string(), bytes::init_constructor())]
 }
 
 pub fn gen_native_modules_defs() -> Vec<NativeModuleDef> {

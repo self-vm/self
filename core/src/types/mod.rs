@@ -359,6 +359,39 @@ impl Value {
         }
     }
 
+    pub fn as_isize(&self, vm: &Vm) -> Result<isize, VMError> {
+        match self {
+            Value::RawValue(r) => r.as_isize(vm),
+            Value::BoundAccess(_) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "i32 or i64".to_string(),
+                        received: self.get_resolved_type(vm),
+                    },
+                    vm,
+                ));
+            }
+            Value::Handle(_) => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "i32 or i64".to_string(),
+                        received: self.get_resolved_type(vm),
+                    },
+                    vm,
+                ));
+            }
+            _ => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: "i32 or i64".to_string(),
+                        received: "unknown_type".to_string(),
+                    },
+                    vm,
+                ));
+            }
+        }
+    }
+
     pub fn as_usize(&self, vm: &Vm) -> Result<usize, VMError> {
         match self {
             Value::RawValue(r) => match r {
