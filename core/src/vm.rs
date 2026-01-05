@@ -97,12 +97,12 @@ impl Vm {
         }
         self.handlers = handlers;
 
-        // load builtin functions (Byte())
+        // load builtins to scope (Byte(), Buffer)
         let builtin = builtin_functions();
-        for (function_name, function) in builtin {
-            let obj_handle = self.memory.alloc(MemObject::Function(function));
+        for (object_name, memobject) in builtin {
+            let obj_handle = self.memory.alloc(memobject);
             self.call_stack
-                .put_to_frame(function_name, Value::Handle(obj_handle));
+                .put_to_frame(object_name, Value::Handle(obj_handle));
         }
 
         // RUN

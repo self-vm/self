@@ -14,12 +14,12 @@ use crate::{
     vm::Vm,
 };
 
-pub fn init_constructor() -> Function {
-    Function::new(
+pub fn init_constructor() -> MemObject {
+    MemObject::Function(Function::new(
         "Byte".to_string(),
         vec!["byte value".to_string()],
         Engine::Native(constructor),
-    )
+    ))
 }
 
 pub fn constructor(

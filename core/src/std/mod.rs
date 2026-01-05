@@ -82,8 +82,11 @@ pub fn bootstrap_default_lib() -> Vec<(String, MemObject)> {
 }
 
 // generate builtin functions
-pub fn builtin_functions() -> Vec<(String, Function)> {
-    vec![("Byte".to_string(), bytes::init_constructor())]
+pub fn builtin_functions() -> Vec<(String, MemObject)> {
+    vec![
+        ("Byte".to_string(), bytes::init_constructor()),
+        ("Buffer".to_string(), bytes::init_constructor()),
+    ]
 }
 
 pub fn gen_native_modules_defs() -> Vec<NativeModuleDef> {
