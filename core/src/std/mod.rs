@@ -1,6 +1,7 @@
-use crate::{memory::MemObject, types::object::func::Function};
+use crate::{memory::MemObject, vm::Vm};
 
 pub mod ai;
+pub mod buffer;
 pub mod bytes;
 pub mod env;
 pub mod fs;
@@ -82,10 +83,10 @@ pub fn bootstrap_default_lib() -> Vec<(String, MemObject)> {
 }
 
 // generate builtin functions
-pub fn builtin_functions() -> Vec<(String, MemObject)> {
+pub fn builtin_functions(vm: &mut Vm) -> Vec<(String, MemObject)> {
     vec![
         ("Byte".to_string(), bytes::init_constructor()),
-        ("Buffer".to_string(), bytes::init_constructor()),
+        ("Buffer".to_string(), buffer::init_constructor(vm)),
     ]
 }
 

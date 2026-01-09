@@ -2,6 +2,7 @@ use crate::{
     core::error::{self, VMError, VMErrorType},
     heap::HeapRef,
     memory::{Handle, MemObject},
+    opcodes::DataType,
     types::{
         object::{
             func::Function, native_struct::NativeStruct, structs::StructLiteral, vector::Vector,
@@ -432,6 +433,21 @@ impl Value {
                     VMErrorType::TypeMismatch {
                         expected: "u32 or u64".to_string(),
                         received: "unknown_type".to_string(),
+                    },
+                    vm,
+                ));
+            }
+        }
+    }
+
+    pub fn as_primitive(&self, vm: &Vm, expected: DataType) -> Result<RawValue, VMError> {
+        match self {
+            Value::RawValue(r) => Ok(r.clone()),
+            _ => {
+                return Err(error::throw(
+                    VMErrorType::TypeMismatch {
+                        expected: expected.as_str().to_string(),
+                        received: self.get_resolved_type(vm),
                     },
                     vm,
                 ));

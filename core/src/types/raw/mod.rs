@@ -107,4 +107,17 @@ impl RawValue {
             RawValue::Nothing => None,
         }
     }
+
+    pub fn as_byte(&self, vm: &Vm) -> Result<Byte, VMError> {
+        match self {
+            RawValue::Byte(b) => Ok(b.clone()),
+            _ => Err(error::throw(
+                VMErrorType::TypeMismatch {
+                    expected: "bool".to_string(),
+                    received: self.get_type_string(),
+                },
+                vm,
+            )),
+        }
+    }
 }

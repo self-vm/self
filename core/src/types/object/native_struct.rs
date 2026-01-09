@@ -2,6 +2,7 @@ use crate::{
     core::error::{self, type_errors, VMError, VMErrorType},
     std::{
         ai::types::{Action, Chain, Link, SessionEnd},
+        buffer::types::Buffer,
         mcp::types::{McpClient, McpTool},
         native::types::NativeLib,
         net::types::{NetServer, NetStream},
@@ -31,6 +32,8 @@ pub enum NativeStruct {
     Interval(Interval),
     // web
     Browser(Browser),
+    // Buffer
+    Buffer(Buffer),
 }
 
 impl NativeStruct {
@@ -47,6 +50,7 @@ impl NativeStruct {
             NativeStruct::NativeLib(x) => x.to_string(vm),
             NativeStruct::Interval(x) => x.to_string(vm),
             NativeStruct::Browser(x) => x.to_string(vm),
+            NativeStruct::Buffer(x) => x.to_string(vm),
         }
     }
 
@@ -66,6 +70,7 @@ impl NativeStruct {
             NativeStruct::NativeLib(x) => x.property_access(property),
             NativeStruct::Interval(x) => x.property_access(property),
             NativeStruct::Browser(x) => x.property_access(property),
+            NativeStruct::Buffer(x) => x.shape.property_access(property),
         }
     }
 
