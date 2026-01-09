@@ -98,7 +98,7 @@ impl Vm {
         self.handlers = handlers;
 
         // load builtins to scope (Byte(), Buffer)
-        let builtin = builtin_functions();
+        let builtin = builtin_functions(self);
         for (object_name, memobject) in builtin {
             let obj_handle = self.memory.alloc(memobject);
             self.call_stack
@@ -632,6 +632,7 @@ impl Vm {
                                                 RawValue::Byte(v) => "byte".to_string(),
                                                 RawValue::Nothing => "nothing".to_string(),
                                             },
+                                            x => todo!("Implement {:#?} value in type function", x),
                                         };
 
                                         self.push_to_stack(
