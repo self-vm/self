@@ -2,6 +2,7 @@ use crate::{
     core::error::{self, net_errors::NetErrors, type_errors::TypeError, VMError, VMErrorType},
     memory::{Handle, MemObject},
     std::{
+        buffer::types::Buffer,
         heap_utils::put_string,
         mcp::types::{McpClient, McpTool},
         NativeMember,
@@ -72,7 +73,7 @@ pub fn get(
                     vm,
                 )
             })?
-            .text()
+            .bytes()
             .await
             .map_err(|e| {
                 error::throw(
@@ -81,7 +82,11 @@ pub fn get(
                 )
             })?;
 
-        let handle = put_string(vm, response);
-        Ok(Value::Handle(handle))
+        let bytes = response.iter().map(|v| v.clone()).collect::<Vec<u8>>();
+        let buffer = Buffer::new_initialized(bytes, vm);
+        let buf_handle = vm
+            .memory
+            .alloc(MemObject::NativeStruct(NativeStruct::Buffer(buffer)));
+        Ok(Value::Handle(buf_handle))
     })
 }
