@@ -4,7 +4,7 @@ use crate::{
     core::error::{self, byte_errors::ByteError, VMError, VMErrorType},
     memory::{Handle, MemObject},
     opcodes::DataType,
-    std::buffer::types::Buffer,
+    std::buffer::types::{as_string_obj, Buffer},
     types::{
         object::{
             func::{Engine, Function},
@@ -27,6 +27,36 @@ pub fn init_constructor(vm: &mut Vm) -> MemObject {
     fields.insert("from_byte".to_string(), Value::Handle(from_byte_handle));
     fields.insert("from_bytes".to_string(), Value::Handle(from_bytes_handle));
     MemObject::StructLiteral(StructLiteral::new("Buffer".to_string(), fields))
+}
+
+pub fn init_lib() -> Vec<(String, MemObject)> {
+    let mut fields = vec![];
+
+    fields.push(("as_string".to_string(), as_string_obj()));
+
+    fields
+}
+
+pub fn add_handlers(vm: &mut Vm) -> HashMap<String, Value> {
+    let mut loaded_members = HashMap::new();
+
+    // if strings lib members are already loaded
+    if vm.handlers.contains_key("buffer.as_string") {
+        if let Some(mem) = vm.get_handler("buffer.as_string") {
+            loaded_members.insert("as_string".to_string(), Value::Handle(mem));
+        }
+    } else {
+        let fields = init_lib();
+        for (handler_name, handler_obj) in fields {
+            let obj_handle = vm.memory.alloc(handler_obj);
+            loaded_members.insert(handler_name.clone(), Value::Handle(obj_handle.clone()));
+
+            let handler_name = format!("string.{}", handler_name); // add lib prefix
+            vm.handlers.insert(handler_name, obj_handle);
+        }
+    }
+
+    return loaded_members;
 }
 
 // from_byte

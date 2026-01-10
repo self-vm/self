@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use crate::{
     core::error::VMError,
     memory::{Handle, MemObject},
+    std::buffer::{self},
     types::{
         object::{
             func::{Engine, Function},
@@ -26,14 +25,7 @@ pub struct Buffer {
 
 impl Buffer {
     pub fn new_initialized(bytes: Vec<u8>, vm: &mut Vm) -> Buffer {
-        let mut fields = HashMap::new();
-        let as_string_handle = vm.memory.alloc(MemObject::Function(Function::new(
-            "as_string".to_string(),
-            vec![],
-            Engine::Native(as_string),
-        )));
-
-        fields.insert("as_string".to_string(), Value::Handle(as_string_handle));
+        let fields = buffer::add_handlers(vm);
         let shape = StructLiteral::new("Buffer".to_string(), fields);
 
         Buffer { bytes, shape }
@@ -44,7 +36,15 @@ impl Buffer {
     }
 }
 
-fn as_string(
+pub fn as_string_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "as_string".to_string(),
+        vec![],
+        Engine::Native(as_string),
+    ))
+}
+
+pub fn as_string(
     vm: &mut Vm,
     _self: Option<Handle>,
     params: Vec<Value>,
