@@ -1302,6 +1302,11 @@ impl Vm {
                             r_heap_object.to_string(self) == l.to_string(),
                         )))
                     }
+                    "!=" => {
+                        value = Value::RawValue(RawValue::Bool(Bool::new(
+                            r_heap_object.to_string(self) != l.to_string(),
+                        )))
+                    }
                     _ => {
                         // TODO: we should probably refactor this logic and make it happen
                         // implementing a trait on each type rather than handling manually
