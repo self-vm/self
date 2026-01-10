@@ -121,8 +121,12 @@ pub fn infer(
     Box::pin(async move {
         let request_ref = params[0].clone();
         let request = request_ref.as_string_obj(vm)?;
-        let context_ref = params[1].clone();
-        let context = context_ref.as_string_obj(vm)?;
+        let options_ref = params[1].clone();
+        let options = options_ref.as_struct_obj(vm)?;
+        let context = options
+            .property_access("context")
+            .unwrap_or(Value::RawValue(RawValue::Nothing))
+            .as_string_obj(vm)?;
 
         if debug {
             println!("AI <- {}({})", request, context.to_string());
@@ -130,7 +134,7 @@ pub fn infer(
 
         // we should try to avoid prompt injection
         // maybe using multiple prompts?
-        let prompt = infer_prompt(&request, &context);
+        let prompt = infer_prompt(&request, &context.to_string());
         let res = fetch_ai(prompt).await;
         let res = match res {
             Ok(r) => r,
