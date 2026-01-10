@@ -43,7 +43,7 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
 }
 
 pub fn generate_mod_def() -> NativeModuleDef {
-    let members = vec![infer_def(), resolve_def()];
+    let members = vec![resolve_def()];
 
     NativeModuleDef {
         module: "ai".to_string(),
