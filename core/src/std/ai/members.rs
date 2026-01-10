@@ -35,6 +35,7 @@ use crate::{
         object::{
             func::{Engine, Function},
             native_struct::NativeStruct,
+            string::SelfString,
             vector::Vector,
         },
         raw::{bool::Bool, f64::F64, utf8::Utf8, RawValue},
@@ -69,6 +70,26 @@ fn ai_response_parser(response: &String, vm: &mut Vm) -> Option<Value> {
         let s = raw_value.as_str()?;
         if s.trim().is_empty() || s.trim() == "nothing" {
             Some(Value::RawValue(RawValue::Nothing))
+        } else if let Some(stripped) = s.strip_prefix("vector:") {
+            let json_value = stripped;
+            let value: Option<Vec<String>> = serde_json::from_str(json_value).ok();
+            let values = if let Some(v) = value {
+                v
+            } else {
+                return None;
+            };
+
+            let vec_values = values
+                .iter()
+                .map(|v| {
+                    let obj = MemObject::String(SelfString::new(v.to_string(), vm));
+                    Value::Handle(vm.memory.alloc(obj))
+                })
+                .collect::<Vec<Value>>();
+
+            let vector = Vector::new_initialized(vec_values, vm);
+            let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
+            Some(Value::Handle(vector_handle))
         } else {
             let value = raw_value.as_str().unwrap();
             let handle = put_string(vm, value.to_string());

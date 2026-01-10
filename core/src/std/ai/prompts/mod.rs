@@ -9,8 +9,10 @@ Analyze the query and respond with a single value in the following json format:
 
 You are provided two elements:
 
-query: a string that describes a condition for example:
+query: a string that describes a inferring condition:
    '<arg> is greater than 10'
+   'extract the urls of <arg>'
+   'get all the links related to linux in <arg>'
 
 context: a dictionary of variables and their current values, for example:
    {{ 'arg': 11 }}
@@ -23,11 +25,13 @@ Response rules:
 * If the conditional expression is not met, respond with nothing.
 * If there are no conditionals but you can infer the type and value, do so.
 * If you cannot determine a type with certainty, respond with nothing.
+* Vector can only contain primitive values. (string, number, boolean)
+* For a vector use a string with the prefix 'vector:' and the vector with primitives values.
 * Never respond with any additional text. Only the final value.
 
 Infer the following input: 
 
-query: {} 
+query: \"{}\" 
 context: {{ 'arg': {} }}
 ",
         request.to_string(),
