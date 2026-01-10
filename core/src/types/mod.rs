@@ -134,7 +134,7 @@ impl Value {
                         return Err(error::throw(
                             VMErrorType::TypeMismatch {
                                 expected: "StructLiteral".to_string(),
-                                received: heap_obj.to_string(vm),
+                                received: heap_obj.get_type(),
                             },
                             vm,
                         ));
