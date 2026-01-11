@@ -4,6 +4,7 @@ use crate::{
     std::{
         buffer::types::Buffer,
         heap_utils::put_string,
+        http::types::HttpResponse,
         mcp::types::{McpClient, McpTool},
         NativeMember,
     },
@@ -63,30 +64,29 @@ pub fn get(
         }
 
         let client = Client::new();
-        let response = client
-            .get(url)
-            .send()
-            .await
-            .map_err(|e| {
-                error::throw(
-                    VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
-                    vm,
-                )
-            })?
-            .bytes()
-            .await
-            .map_err(|e| {
-                error::throw(
-                    VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
-                    vm,
-                )
-            })?;
+        let raw_response = client.get(url).send().await.map_err(|e| {
+            error::throw(
+                VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
+                vm,
+            )
+        })?;
+        let status_code = raw_response.status().as_u16();
+        let raw_body = raw_response.bytes().await.map_err(|e| {
+            error::throw(
+                VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
+                vm,
+            )
+        })?;
 
-        let bytes = response.iter().map(|v| v.clone()).collect::<Vec<u8>>();
-        let buffer = Buffer::new_initialized(bytes, vm);
-        let buf_handle = vm
+        let body_bytes = raw_body.iter().map(|v| v.clone()).collect::<Vec<u8>>();
+        let body_buffer = Buffer::new_initialized(body_bytes, vm);
+        let response = HttpResponse::new_initialized(status_code, body_buffer, vm);
+        let response_handle = vm
             .memory
-            .alloc(MemObject::NativeStruct(NativeStruct::Buffer(buffer)));
-        Ok(Value::Handle(buf_handle))
+            .alloc(MemObject::NativeStruct(NativeStruct::HttpResponse(
+                response,
+            )));
+
+        Ok(Value::Handle(response_handle))
     })
 }

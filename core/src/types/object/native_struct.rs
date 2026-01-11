@@ -3,6 +3,7 @@ use crate::{
     std::{
         ai::types::{Action, Chain, Link, SessionEnd},
         buffer::types::Buffer,
+        http::types::HttpResponse,
         mcp::types::{McpClient, McpTool},
         native::types::NativeLib,
         net::types::{NetServer, NetStream},
@@ -34,6 +35,8 @@ pub enum NativeStruct {
     Browser(Browser),
     // Buffer
     Buffer(Buffer),
+    // Http
+    HttpResponse(HttpResponse),
 }
 
 impl NativeStruct {
@@ -51,6 +54,7 @@ impl NativeStruct {
             NativeStruct::Interval(x) => x.to_string(vm),
             NativeStruct::Browser(x) => x.to_string(vm),
             NativeStruct::Buffer(x) => x.to_string(vm),
+            NativeStruct::HttpResponse(x) => x.to_string(vm),
         }
     }
 
@@ -71,6 +75,7 @@ impl NativeStruct {
             NativeStruct::Interval(x) => x.property_access(property),
             NativeStruct::Browser(x) => x.property_access(property),
             NativeStruct::Buffer(x) => x.shape.property_access(property),
+            NativeStruct::HttpResponse(x) => x.shape.property_access(property),
         }
     }
 
