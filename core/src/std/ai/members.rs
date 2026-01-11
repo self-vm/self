@@ -47,41 +47,117 @@ fn get_response_json(response: &String) -> String {
     cleaned.to_string()
 }
 
-fn ai_response_parser(response: &String, vm: &mut Vm) -> Option<Value> {
+fn ai_response_parser(
+    response: &String,
+    enforced_type: Option<String>,
+    vm: &mut Vm,
+) -> Option<Value> {
     let cleaned = get_response_json(response);
     let json: SValue = serde_json::from_str(cleaned.as_str()).ok()?;
     let raw_value = json.get("value")?;
 
-    if raw_value.is_boolean() {
-        let bool = raw_value.as_bool().unwrap();
-        Some(Value::RawValue(RawValue::Bool(Bool::new(bool))))
+    let inferred_type = if raw_value.is_boolean() {
+        "bool"
     } else if raw_value.is_number() {
-        let value = raw_value.as_f64().unwrap();
-        Some(Value::RawValue(RawValue::F64(F64::new(value))))
+        "number"
     } else if raw_value.is_string() {
         let s = raw_value.as_str()?;
         if s.trim().is_empty() || s.trim() == "nothing" {
-            Some(Value::RawValue(RawValue::Nothing))
+            "nothing"
         } else {
-            let value = raw_value.as_str().unwrap();
-            let handle = put_string(vm, value.to_string());
-            Some(Value::Handle(handle))
+            "string"
         }
     } else if raw_value.is_array() {
-        let values = raw_value.as_array()?;
-        let vec_values = values
-            .iter()
-            .map(|v| {
-                let obj = MemObject::String(SelfString::new(v.to_string(), vm));
-                Value::Handle(vm.memory.alloc(obj))
-            })
-            .collect::<Vec<Value>>();
-
-        let vector = Vector::new_initialized(vec_values, vm);
-        let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
-        Some(Value::Handle(vector_handle))
+        "vector"
     } else {
-        Some(Value::RawValue(RawValue::Nothing))
+        "nothing"
+    };
+
+    if let Some(_type) = enforced_type {
+        // enforced type available and matches
+        if _type == inferred_type {
+            match inferred_type {
+                "bool" => {
+                    let bool = raw_value.as_bool().unwrap();
+                    Some(Value::RawValue(RawValue::Bool(Bool::new(bool))))
+                }
+                "number" => {
+                    let value = raw_value.as_f64().unwrap();
+                    Some(Value::RawValue(RawValue::F64(F64::new(value))))
+                }
+                "string" => {
+                    let value = raw_value.as_str().unwrap();
+                    let handle = put_string(vm, value.to_string());
+                    Some(Value::Handle(handle))
+                }
+                "vector" => {
+                    let values = raw_value.as_array()?;
+                    let vec_values = values
+                        .iter()
+                        .map(|v| {
+                            let obj = MemObject::String(SelfString::new(v.to_string(), vm));
+                            Value::Handle(vm.memory.alloc(obj))
+                        })
+                        .collect::<Vec<Value>>();
+
+                    let vector = Vector::new_initialized(vec_values, vm);
+                    let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
+                    Some(Value::Handle(vector_handle))
+                }
+                "nothing" => Some(Value::RawValue(RawValue::Nothing)),
+                _ => Some(Value::RawValue(RawValue::Nothing)),
+            }
+        } else {
+            // it does not matches, generate a default of the
+            // enforced type
+            match _type.as_str() {
+                "bool" => Some(Value::RawValue(RawValue::Bool(Bool::new(false)))),
+                "number" => Some(Value::RawValue(RawValue::F64(F64::new(0.0)))),
+                "string" => {
+                    let handle = put_string(vm, "".to_string());
+                    Some(Value::Handle(handle))
+                }
+                "vector" => {
+                    let vector = Vector::new_initialized(vec![], vm);
+                    let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
+                    Some(Value::Handle(vector_handle))
+                }
+                "nothing" => Some(Value::RawValue(RawValue::Nothing)),
+                _ => Some(Value::RawValue(RawValue::Nothing)),
+            }
+        }
+    } else {
+        match inferred_type {
+            "bool" => {
+                let bool = raw_value.as_bool().unwrap();
+                Some(Value::RawValue(RawValue::Bool(Bool::new(bool))))
+            }
+            "number" => {
+                let value = raw_value.as_f64().unwrap();
+                Some(Value::RawValue(RawValue::F64(F64::new(value))))
+            }
+            "string" => {
+                let value = raw_value.as_str().unwrap();
+                let handle = put_string(vm, value.to_string());
+                Some(Value::Handle(handle))
+            }
+            "vector" => {
+                let values = raw_value.as_array()?;
+                let vec_values = values
+                    .iter()
+                    .map(|v| {
+                        let obj = MemObject::String(SelfString::new(v.to_string(), vm));
+                        Value::Handle(vm.memory.alloc(obj))
+                    })
+                    .collect::<Vec<Value>>();
+
+                let vector = Vector::new_initialized(vec_values, vm);
+                let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
+                Some(Value::Handle(vector_handle))
+            }
+            "nothing" => Some(Value::RawValue(RawValue::Nothing)),
+            _ => Some(Value::RawValue(RawValue::Nothing)),
+        }
     }
 }
 
@@ -112,8 +188,8 @@ pub fn infer(
             .property_access("context")
             .unwrap_or(Value::RawValue(RawValue::Nothing))
             .as_string_obj(vm)?;
-        let expected_type = options.property_access("expected_type");
-        let expected_type = if let Some(v) = expected_type {
+        let enforced_type = options.property_access("enforced_type");
+        let enforced_type = if let Some(v) = enforced_type {
             let v = v.as_string_obj(vm)?;
             Some(v)
         } else {
@@ -126,7 +202,7 @@ pub fn infer(
 
         // we should try to avoid prompt injection
         // maybe using multiple prompts?
-        let prompt = infer_prompt(&request, &context.to_string(), expected_type);
+        let prompt = infer_prompt(&request, &context.to_string(), &enforced_type);
         let res = fetch_ai(prompt).await;
         let res = match res {
             Ok(r) => r,
@@ -149,7 +225,7 @@ pub fn infer(
             println!("AI -> {}", answer);
         }
 
-        let parsed_answer = ai_response_parser(answer, vm);
+        let parsed_answer = ai_response_parser(answer, enforced_type, vm);
         if let Some(v) = parsed_answer {
             return Ok(v);
         } else {
@@ -215,7 +291,7 @@ pub fn resolve(
             println!("AI -> {}", answer);
         }
 
-        let parsed_answer = ai_response_parser(answer, vm);
+        let parsed_answer = ai_response_parser(answer, None, vm);
         if let Some(v) = parsed_answer {
             return Ok(v);
         } else {

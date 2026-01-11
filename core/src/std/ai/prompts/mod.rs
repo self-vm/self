@@ -1,4 +1,4 @@
-pub fn infer_prompt(request: &String, context: &String, expected_type: Option<String>) -> String {
+pub fn infer_prompt(request: &String, context: &String, expected_type: &Option<String>) -> String {
     return format!(
         "
 Analyze the query and respond with a single value in the following json format:
@@ -40,7 +40,7 @@ context: {{ 'arg': {} }}
         if let Some(t) = expected_type {
             t
         } else {
-            "any".to_string()
+            &"any".to_string()
         },
         context.to_string(),
     );
