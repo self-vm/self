@@ -1,4 +1,4 @@
-pub fn infer_prompt(request: &String, context: &String) -> String {
+pub fn infer_prompt(request: &String, context: &String, expected_type: Option<String>) -> String {
     return format!(
         "
 Analyze the query and respond with a single value in the following json format:
@@ -14,6 +14,8 @@ query: a string that describes a inferring condition:
    'extract the urls of <arg>'
    'get all the links related to linux in <arg>'
 
+response_enforced_type: the type that must be enforced for the inference. <any> gives free choice based on context.
+
 context: a dictionary of variables and their current values, for example:
    {{ 'arg': 11 }}
 
@@ -22,20 +24,25 @@ Context variables appears in the query enclosed in < >, and you must evaluate th
 Response rules: 
 
 * For boolean or logical values use true or false.
-* If the conditional expression is not met, respond with nothing.
 * If there are no conditionals but you can infer the type and value, do so.
-* If you cannot determine a type with certainty, respond with nothing.
-* Vector can only contain primitive values. (string, number, boolean)
-* For a vector use a string with the prefix 'vector:' and the vector with primitives values.
+* Vector can only contain String values. 
+* If response_enforce_type arg provided, enforce the type that it says without conversion.
 * Never respond with any additional text. Only the final value.
+* If you dont know, respond with \"nothing\".
 
 Infer the following input: 
 
 query: \"{}\" 
+response_enforced_type: {}
 context: {{ 'arg': {} }}
 ",
         request.to_string(),
-        context.to_string()
+        if let Some(t) = expected_type {
+            t
+        } else {
+            "any".to_string()
+        },
+        context.to_string(),
     );
 }
 

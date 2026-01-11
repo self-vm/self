@@ -1,11 +1,3 @@
-/*
-HERE WE DEFINE THE LOGIC OF THE AI STD MODULE.
-CURRENTLY WE ARE USING THE OPENAI LLM
-BUT WE COULD IN THE FUTURE IMPLEMENT ANOTHER
-PROVIDER OR ENABLE USER IMPLEMENTATION OF
-PROVIDER.
-*/
-
 use std::vec;
 
 use futures::future::BoxFuture;
@@ -70,31 +62,24 @@ fn ai_response_parser(response: &String, vm: &mut Vm) -> Option<Value> {
         let s = raw_value.as_str()?;
         if s.trim().is_empty() || s.trim() == "nothing" {
             Some(Value::RawValue(RawValue::Nothing))
-        } else if let Some(stripped) = s.strip_prefix("vector:") {
-            let json_value = stripped;
-            let value: Option<Vec<String>> = serde_json::from_str(json_value).ok();
-            let values = if let Some(v) = value {
-                v
-            } else {
-                return None;
-            };
-
-            let vec_values = values
-                .iter()
-                .map(|v| {
-                    let obj = MemObject::String(SelfString::new(v.to_string(), vm));
-                    Value::Handle(vm.memory.alloc(obj))
-                })
-                .collect::<Vec<Value>>();
-
-            let vector = Vector::new_initialized(vec_values, vm);
-            let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
-            Some(Value::Handle(vector_handle))
         } else {
             let value = raw_value.as_str().unwrap();
             let handle = put_string(vm, value.to_string());
             Some(Value::Handle(handle))
         }
+    } else if raw_value.is_array() {
+        let values = raw_value.as_array()?;
+        let vec_values = values
+            .iter()
+            .map(|v| {
+                let obj = MemObject::String(SelfString::new(v.to_string(), vm));
+                Value::Handle(vm.memory.alloc(obj))
+            })
+            .collect::<Vec<Value>>();
+
+        let vector = Vector::new_initialized(vec_values, vm);
+        let vector_handle = vm.memory.alloc(MemObject::Vector(vector));
+        Some(Value::Handle(vector_handle))
     } else {
         Some(Value::RawValue(RawValue::Nothing))
     }
@@ -127,6 +112,13 @@ pub fn infer(
             .property_access("context")
             .unwrap_or(Value::RawValue(RawValue::Nothing))
             .as_string_obj(vm)?;
+        let expected_type = options.property_access("expected_type");
+        let expected_type = if let Some(v) = expected_type {
+            let v = v.as_string_obj(vm)?;
+            Some(v)
+        } else {
+            None
+        };
 
         if debug {
             println!("AI <- {}({})", request, context.to_string());
@@ -134,7 +126,7 @@ pub fn infer(
 
         // we should try to avoid prompt injection
         // maybe using multiple prompts?
-        let prompt = infer_prompt(&request, &context.to_string());
+        let prompt = infer_prompt(&request, &context.to_string(), expected_type);
         let res = fetch_ai(prompt).await;
         let res = match res {
             Ok(r) => r,
