@@ -1431,13 +1431,13 @@ impl Vm {
             }
             Engine::NativeAsync(async_native) => {
                 if args.len() < func.parameters.len() {
-                    // TODO: use self-vm errors system
-                    panic!(
-                        "function '{}' requires {} parameters, provided {}",
-                        func.identifier,
-                        func.parameters.len(),
-                        args.len()
-                    )
+                    let error = VMErrorType::TypeError(TypeError::InvalidFunctionCall {
+                        function: func.identifier.clone(),
+                        expected: func.parameters.len() as u32,
+                        received: args.len() as u32,
+                    });
+
+                    return VMExecutionResult::terminate_with_errors(error, self);
                 }
                 let execution_result = async_native(self, caller, args, debug).await;
                 if let Ok(result) = execution_result {
