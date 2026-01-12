@@ -27,3 +27,11 @@ build
 Run <build.sh> to build the project. There are currently no pre-packaged releases.
 The project is built using Cargo.
 
+
+roadmap
+----
+
+- Expand the Web.Browser struct capabilities
+- Create an Html struct
+  - enable optimization operations over an Html for LLM's injection
+- More robust params config system (allowing definition of params optimized for LLMs)
