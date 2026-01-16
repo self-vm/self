@@ -1471,14 +1471,27 @@ impl Module {
         while self.is_peekable() && !closed {
             // consume identifier
             let token = self.peek("<Identifier>");
-            if token.token_type != LexerTokenType::Identifier {
-                error::throw(
-                    ErrorType::SyntaxError,
-                    format!("Expected '<identifier>' but got '{}'", token.value).as_str(),
-                    Some(token.line),
-                )
-            }
-            let identifier_node = Identifier::new(token.value.clone(), token.at, token.line);
+            let identifier_node = match token.token_type {
+                LexerTokenType::Identifier => {
+                    Identifier::new(token.value.clone(), token.at, token.line)
+                }
+                LexerTokenType::StringLiteral => {
+                    let mut clean_value = token.value.chars();
+                    clean_value.next();
+                    clean_value.next_back();
+                    let clean_value = clean_value.as_str();
+
+                    Identifier::new(clean_value.to_string(), token.at, token.line)
+                }
+                _ => {
+                    error::throw(
+                        ErrorType::SyntaxError,
+                        format!("Expected '<identifier>' but got '{}'", token.value).as_str(),
+                        Some(token.line),
+                    );
+                    std::process::exit(1);
+                }
+            };
 
             // check if is 'field_name:'
             self.next();
