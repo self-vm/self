@@ -1110,10 +1110,15 @@ impl Vm {
         let left = operands.0;
         let right = operands.1;
 
+        // unwrap BoundAccess values to their underlying values
+        // This enables expressions like "{" + var.property + "}"
+        let left_value = self.unwrap_bound_access(left.value.clone());
+        let right_value = self.unwrap_bound_access(right.value.clone());
+
         let value: Value;
         // cloned here, to be able to use later on
         // different VMErrors
-        match (left.value, right.value.clone()) {
+        match (left_value, right_value.clone()) {
             (Value::RawValue(l), Value::RawValue(r)) => {
                 let result_value = match (l, r) {
                     (RawValue::I32(l), RawValue::I32(r)) => match operator {
@@ -1759,6 +1764,18 @@ impl Vm {
 
         args.reverse(); // invocation order
         args
+    }
+
+    /// Unwraps a Value, extracting the underlying value from BoundAccess if present.
+    /// This allows property accesses to be used in binary expressions.
+    fn unwrap_bound_access(&self, value: Value) -> Value {
+        match value {
+            Value::BoundAccess(bound) => {
+                // Recursively unwrap in case of nested bound accesses
+                self.unwrap_bound_access(*bound.property)
+            }
+            other => other,
+        }
     }
 
     // methods for builtin handlers like vector methods
