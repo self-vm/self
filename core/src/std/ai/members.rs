@@ -680,18 +680,28 @@ pub fn unfold(
             }
 
             let conclusion = if let Some(r) = exec_result.result {
-                let handle = r.as_handle()?;
-                let cb_struct = vm.memory.resolve(&handle).as_struct_literal(vm)?;
-                let continue_unfolding = if let Some(v) = cb_struct.property_access("continue") {
-                    v.as_bool(vm)?
+                let conclusion_struct = if let Ok(_conclusion) = r.as_struct_obj(vm) {
+                    _conclusion
                 } else {
-                    false
+                    return Err(error::throw(
+                        VMErrorType::AI(AIError::AIActionForcedAbort(
+                            "unfold callback must return a { continue: <bool>, resolved: \"<reason>\" } struct literal".to_string(),
+                        )),
+                        vm,
+                    ));
                 };
-                let link_resolved_value = if let Some(v) = cb_struct.property_access("resolved") {
-                    v
-                } else {
-                    Value::RawValue(RawValue::Nothing)
-                };
+                let continue_unfolding =
+                    if let Some(v) = conclusion_struct.property_access("continue") {
+                        v.as_bool(vm)?
+                    } else {
+                        false
+                    };
+                let link_resolved_value =
+                    if let Some(v) = conclusion_struct.property_access("resolved") {
+                        v
+                    } else {
+                        Value::RawValue(RawValue::Nothing)
+                    };
 
                 if !continue_unfolding {
                     // return the last resolved value on the callback
@@ -702,7 +712,7 @@ pub fn unfold(
             } else {
                 return Err(error::throw(
                     VMErrorType::AI(AIError::AIActionForcedAbort(
-                        "unfold callback must return a boolean type. true for action exeuction false for aborting.".to_string(),
+                        "unfold callback must return a { continue: <bool>, resolved: \"<reason>\" } struct literal".to_string(),
                     )),
                     vm,
                 ));
