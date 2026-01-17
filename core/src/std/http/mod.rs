@@ -7,7 +7,7 @@ MOMENT TO MOVE FAST LET'S BUILD IT IN RUST
 use crate::{
     memory::MemObject,
     std::{
-        http::members::{get_def, get_obj},
+        http::members::{get_def, get_obj, post_obj},
         NativeModuleDef,
     },
 };
@@ -19,6 +19,7 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     let mut fields = vec![];
 
     fields.push(("get".to_string(), get_obj()));
+    fields.push(("post".to_string(), post_obj()));
 
     ("http".to_string(), fields)
 }
