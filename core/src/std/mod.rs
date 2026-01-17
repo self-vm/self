@@ -8,6 +8,7 @@ pub mod fs;
 pub mod heap_utils;
 pub mod http;
 pub mod io;
+pub mod json;
 pub mod mcp;
 pub mod native;
 pub mod net;
@@ -34,6 +35,7 @@ pub enum NativeModule {
     Path,
     Schedule,
     Io,
+    Json,
 }
 
 pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
@@ -51,6 +53,7 @@ pub fn get_native_module_type(module_name: &str) -> Option<NativeModule> {
         "web" => Some(NativeModule::Web),
         "schedule" => Some(NativeModule::Schedule),
         "io" => Some(NativeModule::Io),
+        "json" => Some(NativeModule::Json),
         _ => None,
     }
 }
@@ -72,6 +75,7 @@ pub fn generate_native_module(
         NativeModule::Web => web::generate_struct(),
         NativeModule::Schedule => schedule::generate_struct(),
         NativeModule::Io => io::generate_struct(),
+        NativeModule::Json => json::generate_struct(),
     }
 }
 

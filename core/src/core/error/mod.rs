@@ -2,6 +2,7 @@ pub mod action_errors;
 pub mod ai_errors;
 pub mod byte_errors;
 pub mod fs_errors;
+pub mod json_errors;
 pub mod memory_errors;
 pub mod net_errors;
 pub mod os_errors;
@@ -11,8 +12,8 @@ pub mod type_errors;
 use crate::{
     core::error::{
         action_errors::ActionError, ai_errors::AIError, byte_errors::ByteError, fs_errors::FsError,
-        memory_errors::MemoryError, net_errors::NetErrors, os_errors::OsError,
-        struct_errors::StructError, type_errors::TypeError,
+        json_errors::JsonErrors, memory_errors::MemoryError, net_errors::NetErrors,
+        os_errors::OsError, struct_errors::StructError, type_errors::TypeError,
     },
     opcodes::DataType,
     stack::OperandsStackValue,
@@ -38,6 +39,7 @@ pub enum VMErrorType {
     Net(NetErrors),
     Struct(StructError),
     Memory(MemoryError),
+    Json(JsonErrors),
     Any(String),
 }
 
@@ -177,6 +179,12 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
             StructError::FieldNotFound { field, struct_type } => (
                 "Field not found".to_string(),
                 format!("'{}' on {}", field, struct_type),
+            ),
+        },
+        VMErrorType::Json(jse) => match jse {
+            JsonErrors::EncodingError(v) => (
+                "Json Encoding error".to_string(),
+                format!("cannot encode {}", v),
             ),
         },
         VMErrorType::Any(s) => ("Error".to_string(), format!("{}", s)),
