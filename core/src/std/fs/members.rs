@@ -44,6 +44,11 @@ pub fn read_file(
     debug: bool,
 ) -> Result<Value, VMError> {
     let path = params[0].as_string_obj(vm)?;
+
+    if debug {
+        println!("FS.read_file <- {}", path);
+    }
+
     let path_obj = Path::new(&path);
     if !path_obj.exists() {
         return Err(error::throw(
@@ -175,6 +180,10 @@ pub fn write_file(
 
     let path = &params[0].as_string_obj(vm)?;
     let content = &params[1].as_string_obj(vm)?;
+
+    if debug {
+        println!("FS.write_file <- {}", path);
+    }
 
     let overwrite_or_create = if let Some(param2) = params.get(2) {
         match param2 {
