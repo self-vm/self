@@ -37,6 +37,10 @@ impl CallStack {
         let last = self.stack.len() - 1;
         self.stack[last].add_export(key);
     }
+
+    pub fn get_frames(&self) -> &Vec<StackFrame> {
+        &self.stack
+    }
 }
 
 #[derive(Debug)]

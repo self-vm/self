@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::vec;
 
 use futures::future::BoxFuture;
@@ -863,7 +864,7 @@ pub fn exec(
         // resolve 'self'
         let (_self, _self_ref) = if let Some(_this) = _self {
             if let MemObject::NativeStruct(NativeStruct::Action(ns)) = vm.memory.resolve(&_this) {
-                (ns, _this)
+                (ns.clone(), _this)
             } else {
                 unreachable!()
             }
@@ -874,6 +875,28 @@ pub fn exec(
         if debug {
             println!("ACTION <- {}.{}", _self.module, _self.member);
         }
+
+        // if exec comes from a Chain unfold, find the chain
+        // and get the context
+        let mut context = std::collections::HashMap::new();
+        if let Some(chain_handle) = find_chain_in_callstack(vm) {
+            if let MemObject::NativeStruct(NativeStruct::Chain(chain)) =
+                vm.memory.resolve(&chain_handle)
+            {
+                context = chain.ctx.clone();
+            }
+        }
+
+        // Store context in call stack for native modules to access
+        let context_obj = crate::std::ai::types::Context { data: context };
+        let context_handle = vm
+            .memory
+            .alloc(MemObject::NativeStruct(NativeStruct::Context(context_obj)));
+        vm.call_stack.put_to_frame(
+            "__action_context".to_string(),
+            Value::Handle(context_handle),
+        );
+
         let native_module_type = get_native_module_type(&_self.module);
 
         // if the module cannot be resolved with the stdlib modules check
@@ -969,6 +992,35 @@ pub fn exec(
 }
 
 // utils functions
+fn find_chain_in_callstack(vm: &Vm) -> Option<Handle> {
+    // Iterate through the call stack to find a Chain
+    let frames = vm.call_stack.get_frames();
+    for frame in frames.iter().rev() {
+        for (_name, value) in &frame.symbols {
+            if let Value::Handle(handle) = value {
+                if let MemObject::NativeStruct(NativeStruct::Chain(_)) = vm.memory.resolve(handle) {
+                    return Some(handle.clone());
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn get_action_context(vm: &Vm) -> Option<HashMap<String, Value>> {
+    // Try to get context from the call stack
+    if let Some(context_value) = vm.call_stack.resolve("__action_context") {
+        if let Value::Handle(handle) = context_value {
+            if let MemObject::NativeStruct(NativeStruct::Context(context)) =
+                vm.memory.resolve(&handle)
+            {
+                return Some(context.data.clone());
+            }
+        }
+    }
+    None
+}
+
 fn enter_session_mode(vm: &mut Vm, conclusion: &Value) -> Option<(String, String)> {
     let handle = match conclusion {
         Value::Handle(h) => h,

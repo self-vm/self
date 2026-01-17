@@ -1,4 +1,4 @@
-mod members;
+pub mod members;
 mod prompts;
 mod providers;
 pub mod types;

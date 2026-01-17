@@ -1,7 +1,7 @@
 use crate::{
     core::error::{self, type_errors, VMError, VMErrorType},
     std::{
-        ai::types::{Action, Chain, Link, SessionEnd},
+        ai::types::{Action, Chain, Context, Link, SessionEnd},
         buffer::types::Buffer,
         http::types::HttpResponse,
         mcp::types::{McpClient, McpTool},
@@ -22,6 +22,7 @@ pub enum NativeStruct {
     // ai
     Action(Action),
     Chain(Chain),
+    Context(Context),
     Link(Link),
     SessionEnd(SessionEnd),
     // mcp
@@ -46,6 +47,7 @@ impl NativeStruct {
             NativeStruct::NetServer(x) => x.to_string(),
             NativeStruct::Action(x) => x.to_string(vm),
             NativeStruct::Chain(x) => x.to_string(vm),
+            NativeStruct::Context(x) => x.to_string(vm),
             NativeStruct::Link(x) => x.to_string(vm),
             NativeStruct::SessionEnd(x) => x.to_string(),
             NativeStruct::McpClient(x) => x.to_string(),
@@ -67,6 +69,7 @@ impl NativeStruct {
             NativeStruct::NetServer(x) => x.shape.property_access(property),
             NativeStruct::Action(x) => x.property_access(property),
             NativeStruct::Chain(x) => x.shape.property_access(property),
+            NativeStruct::Context(x) => x.property_access(property),
             NativeStruct::Link(x) => x.shape.property_access(property),
             NativeStruct::SessionEnd(x) => x.property_access(property),
             NativeStruct::McpClient(x) => x.shape.property_access(property),

@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 
 use crate::core::error::fs_errors::FsError;
 use crate::core::error::type_errors::TypeError;
@@ -12,6 +13,7 @@ use crate::types::raw::bool::Bool;
 use crate::{
     core::error::VMError,
     memory::MemObject,
+    std::ai::members::get_action_context,
     types::{
         object::func::{Engine, Function},
         raw::RawValue,
@@ -19,6 +21,29 @@ use crate::{
     },
     vm::Vm,
 };
+
+fn to_relative(p: &Path) -> PathBuf {
+    p.components()
+        .filter(|c| !matches!(c, Component::RootDir | Component::Prefix(_)))
+        .collect()
+}
+
+fn resolve_path_with_context(vm: &Vm, path: &str) -> PathBuf {
+    let input = Path::new(path);
+    let rel = to_relative(input);
+
+    if let Some(context) = get_action_context(vm) {
+        if let Some(cwd_value) = context.get("cwd") {
+            if let Ok(cwd_str) = cwd_value.as_string_obj(vm) {
+                let cwd_rel = Path::new(&cwd_str);
+                let path = cwd_rel.join(rel);
+                return path;
+            }
+        }
+    }
+
+    rel
+}
 
 // read_file
 pub fn read_file_def() -> NativeMember {
@@ -49,16 +74,21 @@ pub fn read_file(
         println!("FS.read_file <- {}", path);
     }
 
-    let path_obj = Path::new(&path);
+    // Resolve path with context
+    let resolved_path = resolve_path_with_context(vm, &path);
+    let path_obj = Path::new(&resolved_path);
     if !path_obj.exists() {
         return Err(error::throw(
-            VMErrorType::Fs(FsError::FileNotFound(format!("{}", path))),
+            VMErrorType::Fs(FsError::FileNotFound(format!(
+                "{}",
+                resolved_path.display()
+            ))),
             vm,
         ));
     }
     if !path_obj.is_file() {
         return Err(error::throw(
-            VMErrorType::Fs(FsError::NotAFile(format!("{}", path))),
+            VMErrorType::Fs(FsError::NotAFile(format!("{}", resolved_path.display()))),
             vm,
         ));
     }
@@ -101,16 +131,22 @@ pub fn read_dir(
     debug: bool,
 ) -> Result<Value, VMError> {
     let path = params[0].as_string_obj(vm)?;
-    let path_obj = Path::new(&path);
+
+    // Resolve path with context
+    let resolved_path = resolve_path_with_context(vm, &path);
+    let path_obj = Path::new(&resolved_path);
     if !path_obj.exists() {
         return Err(error::throw(
-            VMErrorType::Fs(FsError::FileNotFound(format!("{}", path))),
+            VMErrorType::Fs(FsError::FileNotFound(format!(
+                "{}",
+                resolved_path.display()
+            ))),
             vm,
         ));
     }
     if !path_obj.is_dir() {
         return Err(error::throw(
-            VMErrorType::Fs(FsError::NotADir(format!("{}", path))),
+            VMErrorType::Fs(FsError::NotADir(format!("{}", resolved_path.display()))),
             vm,
         ));
     }
@@ -185,6 +221,10 @@ pub fn write_file(
         println!("FS.write_file <- {}", path);
     }
 
+    // Resolve path with context
+    let resolved_path = resolve_path_with_context(vm, path);
+    let path_obj = Path::new(&resolved_path);
+
     let overwrite_or_create = if let Some(param2) = params.get(2) {
         match param2 {
             Value::RawValue(RawValue::Bool(b)) => b.value,
@@ -202,11 +242,12 @@ pub fn write_file(
         false // default if not passed
     };
 
-    let path_obj = Path::new(path);
-
     if !path_obj.exists() && !overwrite_or_create {
         return Err(error::throw(
-            VMErrorType::Fs(FsError::FileNotFound(path.to_string())),
+            VMErrorType::Fs(FsError::FileNotFound(format!(
+                "{}",
+                resolved_path.display()
+            ))),
             vm,
         ));
     }
@@ -229,7 +270,10 @@ pub fn write_file(
                 Err(err) => {
                     println!("err{:#?}", err);
                     Err(error::throw(
-                        VMErrorType::Fs(FsError::WriteError(path.to_string())),
+                        VMErrorType::Fs(FsError::WriteError(format!(
+                            "{}",
+                            resolved_path.display()
+                        ))),
                         vm,
                     ))
                 }
@@ -238,7 +282,7 @@ pub fn write_file(
         Err(err) => {
             println!("err{:#?}", err);
             Err(error::throw(
-                VMErrorType::Fs(FsError::WriteError(path.to_string())),
+                VMErrorType::Fs(FsError::WriteError(format!("{}", resolved_path.display()))),
                 vm,
             ))
         }
@@ -288,10 +332,15 @@ pub fn delete(
         false // default if not passed
     };
 
-    let path_obj = Path::new(path);
+    // Resolve path with context
+    let resolved_path = resolve_path_with_context(vm, path);
+    let path_obj = Path::new(&resolved_path);
     if !path_obj.exists() {
         return Err(error::throw(
-            VMErrorType::Fs(FsError::FileNotFound(path.to_string())),
+            VMErrorType::Fs(FsError::FileNotFound(format!(
+                "{}",
+                resolved_path.display()
+            ))),
             vm,
         ));
     }
@@ -305,7 +354,7 @@ pub fn delete(
     match op_result {
         Ok(_) => Ok(Value::RawValue(RawValue::Bool(Bool::new(true)))),
         Err(_) => Err(error::throw(
-            VMErrorType::Fs(FsError::DeleteError(path.to_string())),
+            VMErrorType::Fs(FsError::DeleteError(format!("{}", resolved_path.display()))),
             vm,
         )),
     }
@@ -335,17 +384,27 @@ pub fn is_file(
     debug: bool,
 ) -> Result<Value, VMError> {
     let path = params[0].as_string_obj(vm)?;
-    let path_obj = Path::new(&path);
+
+    // Resolve path with context
+    let resolved_path = resolve_path_with_context(vm, &path);
+    let path_obj = Path::new(&resolved_path);
     if !path_obj.exists() {
         return Err(error::throw(
-            VMErrorType::Fs(FsError::FileNotFound(format!("{}", path))),
+            VMErrorType::Fs(FsError::FileNotFound(format!(
+                "{}",
+                resolved_path.display()
+            ))),
             vm,
         ));
     }
 
     let path_is_file = path_obj.is_file();
     if debug {
-        println!("IS_FILE <- {}", path);
+        println!(
+            "IS_FILE <- {} (resolved to {})",
+            path,
+            resolved_path.display()
+        );
         println!("IS_FILE -> {}", path_is_file);
     }
 

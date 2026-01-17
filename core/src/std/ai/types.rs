@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::env;
+use std::{collections::HashMap, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -116,8 +117,34 @@ impl Link {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Context {
+    pub data: HashMap<String, Value>,
+}
+
+impl Context {
+    pub fn new() -> Context {
+        Context {
+            data: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, key: &str) -> Option<Value> {
+        self.data.get(key).cloned()
+    }
+
+    pub fn property_access(&self, property: &str) -> Option<Value> {
+        self.get(property)
+    }
+
+    pub fn to_string(&self, vm: &Vm) -> String {
+        "Context{}".to_string()
+    }
+}
+
 #[derive(Debug)]
 pub struct Chain {
+    pub ctx: HashMap<String, Value>,
     pub shape: StructLiteral,
 }
 
@@ -158,7 +185,19 @@ impl Chain {
         fields.insert("links".to_string(), Value::Handle(links_handle));
         fields.insert("unfold".to_string(), Value::Handle(unfold_handle));
 
+        // default context
+        let mut ctx = HashMap::new();
+
+        let cwd = env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .to_string_lossy()
+            .to_string();
+        let cwd_string = MemObject::String(SelfString::new(cwd, vm));
+        let cwd_handle = vm.memory.alloc(cwd_string);
+        ctx.insert("cwd".to_string(), Value::Handle(cwd_handle));
+
         Chain {
+            ctx: ctx,
             shape: StructLiteral::new("Chain".to_string(), fields),
         }
     }
