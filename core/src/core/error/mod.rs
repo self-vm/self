@@ -183,7 +183,7 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
         },
         VMErrorType::Json(jse) => match jse {
             JsonErrors::EncodingError(v) => (
-                "Json Encoding error".to_string(),
+                "Json encoding error".to_string(),
                 format!("cannot encode {}", v),
             ),
         },
