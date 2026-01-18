@@ -1,0 +1,25 @@
+import http 
+import env
+import json
+
+env.read()
+
+fn send_email(to, subject, body) {
+    let resend_api_key = env.get("RESEND_API_KEY")
+    let res = http.post("https://api.resend.com/emails", {
+        headers: {
+            "content-type": "application/json", 
+            "authorization": "Bearer "+resend_api_key
+        }, 
+        body: json.encode({
+            from: "noreply@self.computer", 
+            to: to, 
+            subject: subject,  
+            html: body
+        })
+    })
+
+    println(res.status_code)
+}
+
+send_email("creator@self.computer", "sample subject", "<p>test</p>")

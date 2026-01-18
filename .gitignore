@@ -1,12 +1,18 @@
 /target
 .DS_Store
 *main.ego
-examples
+/examples/*
 custom.toml
 *.txt
 wforeigns
 .env
-!LICENSE.txt
-!README.txt
 out
 shared
+
+
+# includes
+!LICENSE.txt
+!README.txt
+!/examples/*.ego
+
+
