@@ -1070,6 +1070,29 @@ impl Vm {
 
                         self.pc += 1;
                     }
+                    Opcode::UnaryNegation => {
+                        let operand = self.operand_stack.pop();
+                        if operand.is_none() {
+                            panic!("stack underflow");
+                        };
+
+                        let operand = operand.unwrap();
+                        let unwraped_operand = self.unwrap_bound_access(operand.value.clone());
+                        let value = unwraped_operand.as_bool(self);
+                        match value {
+                            Ok(v) => {
+                                self.push_to_stack(Value::RawValue(RawValue::Bool(Bool::new(!v))), None);
+                            }
+                            Err(err) => {
+                                return VMExecutionResult::terminate_with_errors(
+                                    err.error_type,
+                                    self,
+                                )
+                            }
+                        }
+
+                        self.pc += 1;
+                    }
                     Opcode::FFI_Call => {
                         self.pc += 1; // consume call opcode
                         let args = self.get_function_call_args();

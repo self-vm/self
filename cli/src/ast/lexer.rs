@@ -179,6 +179,14 @@ pub fn lex(source: String) -> Vec<LexerToken> {
                     }
                 }
                 '!' => {
+                    if current_token.len() > 0 {
+                        tokens.push(token_with_type(
+                            current_token.clone(),
+                            line_counter,
+                            line_char_counter - 1,
+                        ));
+                        current_token.clear();
+                    }
                     if let Some(next) = chars.peek() {
                         match next {
                             '=' => {

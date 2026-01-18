@@ -20,6 +20,7 @@ pub mod objects;
 pub mod return_statement;
 pub mod string_literal;
 pub mod structs;
+pub mod unary_expression;
 pub mod vector;
 pub mod while_statement;
 use std::fmt;
@@ -38,7 +39,8 @@ use self::{
     else_statement::ElseStatement, function_declaration::FunctionDeclaration, group::Group,
     identifier::Identifier, if_statement::IfStatement, import_statement::ImportStatement,
     nothing::Nothing, number::Number, return_statement::ReturnStatement,
-    string_literal::StringLiteral, vector::Vector, while_statement::WhileStatement,
+    string_literal::StringLiteral, unary_expression::UnaryExpression, vector::Vector,
+    while_statement::WhileStatement,
 };
 
 #[derive(Debug, Clone)]
@@ -135,6 +137,9 @@ impl fmt::Display for AstNodeType {
             AstNodeType::Expression(Expression::BinaryExpression(_)) => {
                 write!(f, "BinaryExpression")
             }
+            AstNodeType::Expression(Expression::UnaryExpression(_)) => {
+                write!(f, "UnaryExpression")
+            }
         }
     }
 }
@@ -153,6 +158,7 @@ pub enum Expression {
     Bool(Bool),
     Identifier(Identifier),
     BinaryExpression(BinaryExpression),
+    UnaryExpression(UnaryExpression),
     CallExpression(CallExpression),
     StructLiteral(StructLiteral),
     ObjectLiteral(ObjectLiteral),

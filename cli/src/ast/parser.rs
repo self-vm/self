@@ -26,8 +26,8 @@ use crate::{
 use super::{
     binary_expression::BinaryExpression, break_statement::BreakStatement,
     else_statement::ElseStatement, if_statement::IfStatement, import_statement::ImportStatement,
-    nothing::Nothing, return_statement::ReturnStatement, vector::Vector,
-    while_statement::WhileStatement, Type,
+    nothing::Nothing, return_statement::ReturnStatement, unary_expression::UnaryExpression,
+    vector::Vector, while_statement::WhileStatement, Type,
 };
 
 pub struct Module {
@@ -279,6 +279,9 @@ impl Module {
                         token.at, token.line,
                     )))
                 }
+                LexerTokenType::EndOfStatement => {
+                    self.next(); // skip ';'
+                }
                 _ => {
                     error::throw(
                         ErrorType::SyntaxError,
@@ -387,6 +390,10 @@ impl Module {
                         Expression::LambdaExpression(_) => {
                             // use identifier as a fallback
                             last_token = Some(LexerTokenType::Arrow)
+                        }
+                        Expression::UnaryExpression(_) => {
+                            // use identifier as a fallback
+                            last_token = Some(LexerTokenType::TrueKeyword)
                         }
                     }
                     group_node.add_child(Some(node));
@@ -1072,19 +1079,27 @@ impl Module {
             LexerTokenType::OpenParenthesis => {
                 // consume "(...)"
                 let group_node = self.group(None);
-                let next_token = self.unsafe_peek();
 
-                match next_token.token_type {
-                    LexerTokenType::Arrow => {
-                        let lambda_node = self.lambda_expression(group_node);
-                        lambda_node
-                    }
-                    _ => {
+                if self.is_peekable() && self.unsafe_peek().token_type == LexerTokenType::Arrow {
+                    let lambda_node = self.lambda_expression(group_node);
+                    lambda_node
+                } else {
+                    if group_node.children.len() == 1 {
+                        if let Some(Some(child)) = group_node.children.first() {
+                            child.clone()
+                        } else {
+                            error::throw(
+                                ErrorType::ParsingError,
+                                "Empty group is not allowed as an expression",
+                                Some(token.line),
+                            );
+                            std::process::exit(1);
+                        }
+                    } else {
                         error::throw(
                             ErrorType::ParsingError,
-                            format!("Unexpected token '{}', expected ')'", next_token.value)
-                                .as_str(),
-                            Some(next_token.line),
+                            "Group expression must contain exactly one expression",
+                            Some(token.line),
                         );
                         std::process::exit(1);
                     }
@@ -1144,7 +1159,7 @@ impl Module {
                         || next.token_type == LexerTokenType::Dot
                     {
                         self.parse_postfix_expression(ctx)
-                    } else if next.token_type == LexerTokenType::OpenCurlyBrace {
+                    } else if next.token_type == LexerTokenType::OpenCurlyBrace && ctx.allow_struct_literal {
                         self.struct_literal(ctx)
                     } else {
                         self.next();
@@ -1166,6 +1181,16 @@ impl Module {
             LexerTokenType::NothingKeyword => {
                 self.next(); // consume nothing keyword
                 Expression::Nothing(Nothing::new(token.at, token.line))
+            }
+            LexerTokenType::NotOperator => {
+                self.next(); // consume '!'
+                let operand = self.parse_factor(ctx);
+                Expression::UnaryExpression(UnaryExpression::new(
+                    token.value.clone(),
+                    Box::new(operand),
+                    token.at,
+                    token.line,
+                ))
             }
             _ => {
                 error::throw(
@@ -1383,6 +1408,9 @@ impl Module {
                             last_token = Some(LexerTokenType::Identifier)
                         }
                         Expression::LambdaExpression(_) => last_token = Some(LexerTokenType::Arrow),
+                        Expression::UnaryExpression(_) => {
+                            last_token = Some(LexerTokenType::TrueKeyword)
+                        }
                     }
                     vector_node.add_child(node);
                 }

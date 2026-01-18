@@ -461,6 +461,17 @@ impl Compiler {
                     _ => {}
                 };
             }
+            Expression::UnaryExpression(v) => {
+                // operand
+                let operand = *v.operand.clone();
+                bytecode.extend_from_slice(&Compiler::compile_expression(&operand, false));
+
+                // operator
+                match v.operator.as_str() {
+                    "!" => bytecode.push(get_bytecode("unary_negation".to_string())),
+                    _ => {}
+                };
+            }
             Expression::MemberExpression(v) => {
                 let property = v.property.clone();
                 let object = v.object.clone();
@@ -485,9 +496,6 @@ impl Compiler {
             Expression::Nothing(_) => {
                 bytecode.push(get_bytecode("load_const".to_string()));
                 bytecode.push(get_bytecode("nothing".to_string()));
-            }
-            _ => {
-                panic!("unhandled expression type")
             }
         };
 

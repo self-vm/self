@@ -31,6 +31,7 @@ pub fn get_codes_map() -> HashMap<String, u8> {
     m.insert("export".to_string(), 0x16);
     m.insert("return".to_string(), 0x17);
     m.insert("drop".to_string(), 0x18);
+    m.insert("unary_negation".to_string(), 0x19);
 
     // builtin functions opcode - level: 0
     m.insert("print".to_string(), 0x02);
@@ -84,6 +85,7 @@ pub enum Opcode {
     FuncDec,
     StructDec,
     GetProperty,
+    UnaryNegation,
     Unknown,
 }
 
@@ -115,6 +117,7 @@ impl Opcode {
             0x16 => Opcode::Export,
             0x17 => Opcode::Return,
             0x18 => Opcode::Drop,
+            0x19 => Opcode::UnaryNegation,
             _ => Opcode::Unknown,
         }
     }
