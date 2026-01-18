@@ -304,15 +304,18 @@ impl Value {
                     vm,
                 ));
             }
-            Value::BoundAccess(_) => {
-                return Err(error::throw(
-                    VMErrorType::TypeMismatch {
-                        expected: "function".to_string(),
-                        received: "bound_access".to_string(),
-                    },
-                    vm,
-                ));
-            }
+            Value::BoundAccess(b) => match b.property.as_function_obj(vm) {
+                Ok(v) => Ok(v),
+                Err(_) => {
+                    return Err(error::throw(
+                        VMErrorType::TypeMismatch {
+                            expected: "function".to_string(),
+                            received: "bound_access".to_string(),
+                        },
+                        vm,
+                    ));
+                }
+            },
             _ => {
                 return Err(error::throw(
                     VMErrorType::TypeMismatch {

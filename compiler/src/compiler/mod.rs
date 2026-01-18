@@ -587,7 +587,7 @@ impl Compiler {
         bytecode
     }
 
-    fn compile_block(node: &Block) -> Vec<u8> {
+    pub fn compile_block(node: &Block) -> Vec<u8> {
         let mut bytecode = vec![];
         for node in &node.children {
             let node_bytecode = Compiler::gen_node_bytecode(node);

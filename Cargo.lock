@@ -1489,6 +1489,7 @@ version = "0.1.0"
 dependencies = [
  "chromiumoxide",
  "dotenvy",
+ "ego-compiler",
  "futures",
  "libloading",
  "regex",

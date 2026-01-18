@@ -2,6 +2,7 @@ use std::{cell::Cell, process::exit};
 
 use crate::{
     ast::{
+        AstNodeType, Expression, LexerToken, LexerTokenType,
         assignament_statement::{AssignamentNode, VarType},
         block::Block,
         bool::Bool,
@@ -18,16 +19,15 @@ use crate::{
         objects::{ObjectLiteral, ObjectType},
         string_literal::StringLiteral,
         structs::{Struct, StructLiteral, StructTypeExpr},
-        AstNodeType, Expression, LexerToken, LexerTokenType,
     },
     core::error::{self, ErrorType},
 };
 
 use super::{
-    binary_expression::BinaryExpression, break_statement::BreakStatement,
+    Type, binary_expression::BinaryExpression, break_statement::BreakStatement,
     else_statement::ElseStatement, if_statement::IfStatement, import_statement::ImportStatement,
     nothing::Nothing, return_statement::ReturnStatement, unary_expression::UnaryExpression,
-    vector::Vector, while_statement::WhileStatement, Type,
+    vector::Vector, while_statement::WhileStatement,
 };
 
 pub struct Module {
@@ -106,6 +106,13 @@ impl Module {
     pub fn parse(&mut self) -> ModuleAst {
         let module = ModuleAst::new(&self.module_name);
         self.tree(module)
+    }
+
+    pub fn parse_block(&mut self) -> Block {
+        match self.block() {
+            AstNodeType::Block(b) => b,
+            _ => unreachable!(),
+        }
     }
 
     fn tree(&mut self, mut module_ast: ModuleAst) -> ModuleAst {
@@ -1159,7 +1166,9 @@ impl Module {
                         || next.token_type == LexerTokenType::Dot
                     {
                         self.parse_postfix_expression(ctx)
-                    } else if next.token_type == LexerTokenType::OpenCurlyBrace && ctx.allow_struct_literal {
+                    } else if next.token_type == LexerTokenType::OpenCurlyBrace
+                        && ctx.allow_struct_literal
+                    {
                         self.struct_literal(ctx)
                     } else {
                         self.next();

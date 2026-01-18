@@ -1,0 +1,24 @@
+// default unfold callback
+// ---
+// this code is in reality runned
+// inside of function block. here
+// happens the function body declaration. 
+//
+// fn default_unfold(link) 
+{
+    println("[",link.def,"]")
+    println(" `- ", link.action.module, ".", link.action.member)
+    print("press [Y] to process next link > ")
+
+    let content = io.read_line()
+    if content != "y" {
+        return ({ continue: false, resolved: "manually interrupted" })
+    }
+
+    println("------")
+    println()
+    let out = link.action.exec()
+    println(out)
+    println("----------")
+    return  ({ continue: true, resolved: out })
+}

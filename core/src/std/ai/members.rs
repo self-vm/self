@@ -1,6 +1,7 @@
-use std::collections::HashMap;
 use std::vec;
+use std::{collections::HashMap, path::Path};
 
+use ego_compiler::{unsafe_compile_block};
 use futures::future::BoxFuture;
 use serde_json::Value as SValue;
 
@@ -851,6 +852,20 @@ pub fn unfold(
 
         Ok(result)
     })
+}
+
+// unfold and traverse a chain links
+pub fn default_unfold_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "default_unfold".to_string(),
+        vec!["link".to_string()], // TODO: load params to native functions
+        Engine::Bytecode(default_unfold()),
+    ))
+}
+
+pub fn default_unfold() -> Vec<u8> {
+    let dir = Path::new(std::file!()).parent().unwrap();
+    unsafe_compile_block("unfold.ego", Path::join(dir, "./unfold.ego"))
 }
 
 // Action type methods
