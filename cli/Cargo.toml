@@ -1,8 +1,8 @@
 [package]
-name = "selfcli"
+name = "self-cli"
 version = "0.0.0-alpha.0.1"
 edition = "2021"
-default-run = "selfcli"
+default-run = "self-cli"
 
 [dependencies]
 self-vm = { path = "../core" }
