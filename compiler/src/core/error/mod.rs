@@ -16,7 +16,7 @@ pub enum ErrorType {
     IOError,
 }
 
-pub fn throw(error_type: ErrorType, error_message: &str, line: Option<usize>) {
+pub fn throw(error_type: ErrorType, error_message: &str, line: Option<usize>) -> ! {
     let error_string = match error_type {
         ErrorType::SyntaxError => "Syntax error:",
         ErrorType::EgoUsageError => "Usage error:",

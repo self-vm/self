@@ -3,13 +3,13 @@ pub mod logo;
 pub mod new;
 pub mod run;
 
+use ego_compiler::core::error::{self, ErrorType};
+
 use self::logo::Logo;
 use self::new::New;
 use self::run::Run;
 
 use crate::commands::compile::Compile;
-use crate::core::error;
-use crate::core::error::ErrorType;
 use std::env;
 
 pub enum Command {

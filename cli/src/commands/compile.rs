@@ -3,11 +3,11 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 
-use crate::ast::lex;
-use crate::ast::Module;
-use crate::compiler::Compiler;
-use crate::core::error;
-use crate::core::error::ErrorType;
+use ego_compiler::ast::lex;
+use ego_compiler::ast::Module;
+use ego_compiler::compiler::Compiler;
+use ego_compiler::core::error;
+use ego_compiler::core::error::ErrorType;
 
 pub struct Compile {
     args: Vec<String>,

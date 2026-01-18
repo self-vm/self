@@ -1,8 +1,6 @@
-mod ast;
-mod commands;
-mod compiler;
-mod core;
+#![allow(warnings)]
 
+mod commands;
 use commands::Command;
 
 #[tokio::main(flavor = "multi_thread")]
