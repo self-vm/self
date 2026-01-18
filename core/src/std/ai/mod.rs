@@ -45,11 +45,14 @@ pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     ("ai".to_string(), fields)
 }
 
-pub fn generate_mod_def() -> NativeModuleDef {
-    let members = vec![resolve_def()];
+// I don't think it's a good idea to let the Chain
+// make another AI call, could end in infinite loops
+// or in unnecessary calls.
+// pub fn generate_mod_def() -> NativeModuleDef {
+//     let members = vec![resolve_def()];
 
-    NativeModuleDef {
-        module: "ai".to_string(),
-        members,
-    }
-}
+//     NativeModuleDef {
+//         module: "ai".to_string(),
+//         members,
+//     }
+// }

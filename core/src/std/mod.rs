@@ -97,7 +97,7 @@ pub fn builtin_functions(vm: &mut Vm) -> Vec<(String, MemObject)> {
 pub fn gen_native_modules_defs() -> Vec<NativeModuleDef> {
     return vec![
         fs::generate_mod_def(),
-        ai::generate_mod_def(),
+        // ai::generate_mod_def(),
         web::generate_mod_def(),
         http::generate_mod_def(),
         io::generate_mod_def(),
