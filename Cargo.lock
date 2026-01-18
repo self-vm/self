@@ -430,8 +430,8 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 name = "emulator"
 version = "0.1.0"
 dependencies = [
+ "ego-compiler",
  "self-vm",
- "selfcli",
  "tokio",
 ]
 
@@ -1493,6 +1493,18 @@ name = "self-bytecode"
 version = "0.1.0"
 
 [[package]]
+name = "self-cli"
+version = "0.0.0-alpha.0.1"
+dependencies = [
+ "colored",
+ "ego-compiler",
+ "lazy_static",
+ "regex",
+ "self-vm",
+ "tokio",
+]
+
+[[package]]
 name = "self-vm"
 version = "0.1.0"
 dependencies = [
@@ -1511,18 +1523,6 @@ dependencies = [
  "tokio",
  "toml",
  "webpki-roots 0.26.11",
-]
-
-[[package]]
-name = "selfcli"
-version = "0.0.0-alpha.0.1"
-dependencies = [
- "colored",
- "ego-compiler",
- "lazy_static",
- "regex",
- "self-vm",
- "tokio",
 ]
 
 [[package]]

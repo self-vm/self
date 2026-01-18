@@ -26,9 +26,8 @@ use crate::{
 use super::{
     Type, binary_expression::BinaryExpression, break_statement::BreakStatement,
     else_statement::ElseStatement, if_statement::IfStatement, import_statement::ImportStatement,
-    index_expression::IndexExpression,
-    nothing::Nothing, return_statement::ReturnStatement, unary_expression::UnaryExpression,
-    vector::Vector, while_statement::WhileStatement,
+    index_expression::IndexExpression, nothing::Nothing, return_statement::ReturnStatement,
+    unary_expression::UnaryExpression, vector::Vector, while_statement::WhileStatement,
 };
 
 pub struct Module {
@@ -1170,7 +1169,12 @@ impl Module {
                         || next.token_type == LexerTokenType::Dot
                         || next.token_type == LexerTokenType::OpenSquareBracket
                     {
-                        self.parse_postfix_expression(ctx)
+                        let identifier = Expression::Identifier(Identifier::new(
+                            token.value.clone(),
+                            token.at,
+                            token.line,
+                        ));
+                        self.parse_postfix_expression(identifier, ctx)
                     } else if next.token_type == LexerTokenType::OpenCurlyBrace
                         && ctx.allow_struct_literal
                     {
