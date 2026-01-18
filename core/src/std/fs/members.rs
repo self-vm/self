@@ -360,11 +360,12 @@ pub fn delete(
     }
 }
 
-// is_file check a path to see if it's a path
+// is_file check a path to see if it's a path is a file
 pub fn is_file_def() -> NativeMember {
     NativeMember {
         name: "is_file".to_string(),
-        description: "check if the given path is a file".to_string(),
+        description: "check if the given path is a file (fails when path does not exists)"
+            .to_string(),
         params: Some(vec!["path(string)".to_string()]),
     }
 }
@@ -413,4 +414,46 @@ pub fn is_file(
     } else {
         return Ok(Value::RawValue(RawValue::Bool(Bool::new(false))));
     }
+}
+
+// exists check a path to see if it's a path
+pub fn exists_def() -> NativeMember {
+    NativeMember {
+        name: "exists".to_string(),
+        description: "check if the given path exists".to_string(),
+        params: Some(vec!["path(string)".to_string()]),
+    }
+}
+
+pub fn exists_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "exists".to_string(),
+        vec!["path".to_string()],
+        Engine::Native(exists),
+    ))
+}
+
+pub fn exists(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> Result<Value, VMError> {
+    let path = params[0].as_string_obj(vm)?;
+
+    // Resolve path with context
+    let resolved_path = resolve_path_with_context(vm, &path);
+    let path_obj = Path::new(&resolved_path);
+    let path_exists = if path_obj.exists() {
+        Bool::new(true)
+    } else {
+        Bool::new(false)
+    };
+
+    if debug {
+        println!("FS.EXISTS <- {}({})", path, resolved_path.display());
+        println!("EXISTS -> {}", path_exists.value);
+    }
+
+    Ok(Value::RawValue(RawValue::Bool(path_exists)))
 }
