@@ -6,7 +6,11 @@ use std::fs;
 use crate::ast::export_statement::ExportStatement;
 use crate::ast::return_statement::ReturnStatement;
 use crate::ast::structs::StructTypeExpr;
-use crate::ast::{lex, Module};
+use crate::ast::{Module, lex};
+use crate::utils::{
+    Number,
+    to_bytes::{bytes_from_32, bytes_from_64, bytes_from_float},
+};
 use crate::{
     ast::{
         import_statement::{ImportStatement, ModuleType},
@@ -16,12 +20,9 @@ use crate::{
     core::error::{self, ErrorType},
 };
 use bytecode::get_bytecode;
-use self_vm::utils::{
-    to_bytes::{bytes_from_32, bytes_from_64, bytes_from_float},
-    Number,
-};
 
 use crate::ast::{
+    AstNodeType, Expression, Type,
     assignament_statement::{AssignamentNode, VarType},
     block::Block,
     function_declaration::FunctionDeclaration,
@@ -31,7 +32,6 @@ use crate::ast::{
     objects::ObjectType,
     structs::Struct,
     while_statement::WhileStatement,
-    AstNodeType, Expression, Type,
 };
 
 pub fn gen_bytecode(modulename: String, code: String, args: &Vec<String>) -> Vec<u8> {

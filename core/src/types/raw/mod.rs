@@ -17,10 +17,10 @@ use utf8::Utf8;
 
 use crate::{
     core::error::{self, VMError, VMErrorType},
-    opcodes::DataType,
     types::raw::byte::Byte,
     vm::Vm,
 };
+use self_bytecode::DataType;
 
 #[derive(Debug, Clone)]
 pub enum RawValue {

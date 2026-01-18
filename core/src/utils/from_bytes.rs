@@ -4,13 +4,12 @@ ONLY USED BY THE `translator` MODULE. WHICH
 IS IN FACT ANOTHER MODULE THAT LOOKS LIKE
 IT SHOULD BE REMOVED
 */
-use crate::{
-    opcodes::DataType,
-    types::{
-        raw::{bool::Bool, f64::F64, i32::I32, i64::I64, u32::U32, u64::U64, utf8::Utf8, RawValue},
-        Value,
-    },
+
+use crate::types::{
+    raw::{bool::Bool, f64::F64, i32::I32, i64::I64, u32::U32, u64::U64, utf8::Utf8, RawValue},
+    Value,
 };
+use self_bytecode::DataType;
 
 pub fn bytes_to_data(data_type: &DataType, value: &Vec<u8>) -> (Value, String) {
     let printable_value;

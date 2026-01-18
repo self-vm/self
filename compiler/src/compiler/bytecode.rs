@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use self_vm::get_codes_map;
-
 use crate::core::error::{self, ErrorType};
+use self_bytecode::get_codes_map;
 
 pub struct Bytecode {
     table: HashMap<String, u8>,

@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::{
     core::error::{self, byte_errors::ByteError, VMError, VMErrorType},
     memory::{Handle, MemObject},
-    opcodes::DataType,
     std::buffer::types::{as_string_obj, Buffer},
     types::{
         object::{
@@ -16,6 +15,7 @@ use crate::{
     },
     vm::Vm,
 };
+use self_bytecode::DataType;
 
 pub mod types;
 

@@ -2,7 +2,6 @@ use crate::{
     core::error::{self, fatal_errors::FatalError, VMError, VMErrorType},
     heap::HeapRef,
     memory::{Handle, MemObject},
-    opcodes::DataType,
     types::{
         object::{
             func::Function, native_struct::NativeStruct, structs::StructLiteral, vector::Vector,
@@ -12,6 +11,7 @@ use crate::{
     },
     vm::Vm,
 };
+use self_bytecode::DataType;
 
 pub mod object;
 pub mod raw;

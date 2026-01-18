@@ -408,7 +408,7 @@ version = "0.1.0"
 dependencies = [
  "lazy_static",
  "regex",
- "self-vm",
+ "self-bytecode",
 ]
 
 [[package]]
@@ -1480,6 +1480,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "self-bytecode"
+version = "0.1.0"
+
+[[package]]
 name = "self-vm"
 version = "0.1.0"
 dependencies = [
@@ -1491,6 +1495,7 @@ dependencies = [
  "reqwest",
  "rmcp",
  "rustls",
+ "self-bytecode",
  "serde",
  "serde_json",
  "tokio",

@@ -5,7 +5,6 @@ pub mod types;
 
 use crate::{
     memory::MemObject,
-    opcodes::DataType,
     std::{
         ai::members::{chain_obj, do_fn, infer, infer_def, resolve_def, resolve_obj},
         NativeModuleDef,
@@ -15,6 +14,7 @@ use crate::{
         structs::StructDeclaration,
     },
 };
+use self_bytecode::DataType;
 
 pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     let mut fields = vec![];

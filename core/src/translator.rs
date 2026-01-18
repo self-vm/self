@@ -6,11 +6,11 @@
 
 use crate::{
     instructions::Instruction,
-    opcodes::{DataType, Opcode},
     types::{raw::RawValue, Value},
     utils::from_bytes::bytes_to_data,
     vm::Vm,
 };
+use self_bytecode::{DataType, Opcode};
 
 pub struct Translator {
     bytecode: Vec<u8>,

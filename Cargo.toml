@@ -1,2 +1,2 @@
 [workspace]
-members = ["cli", "compiler", "core", "emulator"]
+members = [ "bytecode","cli", "compiler", "core", "emulator"]

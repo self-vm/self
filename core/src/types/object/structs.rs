@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     core::error::{self, fatal_errors::FatalError},
-    opcodes::DataType,
     types::Value,
 };
+use self_bytecode::DataType;
 
 #[derive(Debug, Clone)]
 pub struct StructDeclaration {

@@ -1,9 +1,9 @@
 use crate::{
-    ast::{call_expression::CallExpression, string_literal::StringLiteral, Expression},
-    compiler::{self, bytecode::get_bytecode, Compiler},
+    ast::{Expression, call_expression::CallExpression, string_literal::StringLiteral},
+    compiler::{self, Compiler, bytecode::get_bytecode},
 };
 
-use self_vm::utils::{to_bytes::bytes_from_32, Number};
+use crate::utils::{Number, to_bytes::bytes_from_32};
 
 pub fn function_call_as_bytecode(node: &CallExpression) -> Vec<u8> {
     let mut bytecode = vec![];

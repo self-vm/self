@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod compiler;
 pub mod core;
+pub mod utils;
 
 use std::fs::File;
 use std::io::Write;

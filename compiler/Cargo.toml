@@ -7,6 +7,6 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-self-vm = { path = "../core" }
+self-bytecode = { path = "../bytecode" }
 regex = "1"
 lazy_static = "1.4"

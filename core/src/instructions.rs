@@ -1,4 +1,4 @@
-use crate::opcodes::DataType;
+use self_bytecode::DataType;
 
 #[derive(Clone, Debug)]
 pub enum Instruction {

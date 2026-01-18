@@ -17,10 +17,10 @@ use crate::{
         memory_errors::MemoryError, net_errors::NetErrors, os_errors::OsError,
         struct_errors::StructError, type_errors::TypeError,
     },
-    opcodes::DataType,
     stack::OperandsStackValue,
     vm::Vm,
 };
+use self_bytecode::DataType;
 
 #[derive(Debug)]
 pub enum VMErrorType {

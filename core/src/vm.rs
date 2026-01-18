@@ -13,8 +13,6 @@ use crate::events::Event;
 use crate::memory::Handle;
 use crate::memory::MemObject;
 use crate::memory::MemoryManager;
-use crate::opcodes::DataType;
-use crate::opcodes::Opcode;
 use crate::std::bootstrap_default_lib;
 use crate::std::builtin_functions;
 use crate::std::heap_utils::put_string;
@@ -31,6 +29,8 @@ use crate::types::raw::utf8::Utf8;
 use crate::types::raw::RawValue;
 use crate::types::raw::{bool::Bool, f64::F64, i32::I32, i64::I64, u32::U32, u64::U64};
 use crate::utils::foreign_handlers_utils::get_foreign_handlers;
+use self_bytecode::DataType;
+use self_bytecode::Opcode;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -1081,7 +1081,10 @@ impl Vm {
                         let value = unwraped_operand.as_bool(self);
                         match value {
                             Ok(v) => {
-                                self.push_to_stack(Value::RawValue(RawValue::Bool(Bool::new(!v))), None);
+                                self.push_to_stack(
+                                    Value::RawValue(RawValue::Bool(Bool::new(!v))),
+                                    None,
+                                );
                             }
                             Err(err) => {
                                 return VMExecutionResult::terminate_with_errors(
