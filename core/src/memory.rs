@@ -201,6 +201,17 @@ pub enum MemObject {
 }
 
 impl MemObject {
+    pub fn llm_serialize(&self, vm: &Vm) -> String {
+        match self {
+            MemObject::String(x) => x.to_string(),
+            MemObject::Function(x) => x.to_string(),
+            MemObject::StructDeclaration(x) => x.to_string(),
+            MemObject::StructLiteral(x) => x.to_string(),
+            MemObject::NativeStruct(x) => x.serialize(vm),
+            MemObject::Vector(x) => x.to_string(vm),
+        }
+    }
+
     pub fn to_string(&self, vm: &Vm) -> String {
         match self {
             MemObject::String(x) => x.to_string(),

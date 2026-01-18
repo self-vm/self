@@ -1,5 +1,5 @@
 use crate::{
-    core::error::{self, VMError, VMErrorType},
+    core::error::{self, fatal_errors::FatalError, VMError, VMErrorType},
     heap::HeapRef,
     memory::{Handle, MemObject},
     opcodes::DataType,
@@ -24,6 +24,15 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn llm_serialize(&self, vm: &Vm) -> String {
+        match self {
+            Value::RawValue(x) => x.to_string(),
+            Value::BoundAccess(x) => x.property.to_string(vm),
+            Value::Handle(x) => vm.memory.resolve(x).llm_serialize(vm),
+            _ => "unkown_value_type".to_string(),
+        }
+    }
+
     pub fn to_string(&self, vm: &Vm) -> String {
         match self {
             Value::RawValue(x) => x.to_string(),
@@ -452,6 +461,35 @@ impl Value {
                     vm,
                 ));
             }
+        }
+    }
+
+    // unsafe methods
+    pub fn unsafe_as_native_struct<'a>(&self, vm: &'a Vm) -> &'a NativeStruct {
+        match self {
+            Value::Handle(r) => {
+                let heap_obj = vm.memory.resolve(&r);
+                let request = match heap_obj {
+                    MemObject::NativeStruct(s) => s,
+                    _ => error::fatal(FatalError::InvalidValueUnwrap(self.get_resolved_type(vm))),
+                };
+
+                request
+            }
+            _ => error::fatal(FatalError::InvalidValueUnwrap(self.get_resolved_type(vm))),
+        }
+    }
+
+    pub fn unsafe_as_usize(&self, vm: &Vm) -> usize {
+        match self {
+            Value::RawValue(r) => match r {
+                RawValue::U32(v) => v.value as usize,
+                RawValue::U64(v) => v.value as usize,
+                RawValue::I32(v) => v.value as usize,
+                RawValue::I64(v) => v.value as usize,
+                _ => error::fatal(FatalError::InvalidValueUnwrap(self.get_resolved_type(vm))),
+            },
+            _ => error::fatal(FatalError::InvalidValueUnwrap(self.get_resolved_type(vm))),
         }
     }
 }

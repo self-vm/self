@@ -1,6 +1,7 @@
 pub mod action_errors;
 pub mod ai_errors;
 pub mod byte_errors;
+pub mod fatal_errors;
 pub mod fs_errors;
 pub mod json_errors;
 pub mod memory_errors;
@@ -11,9 +12,10 @@ pub mod type_errors;
 
 use crate::{
     core::error::{
-        action_errors::ActionError, ai_errors::AIError, byte_errors::ByteError, fs_errors::FsError,
-        json_errors::JsonErrors, memory_errors::MemoryError, net_errors::NetErrors,
-        os_errors::OsError, struct_errors::StructError, type_errors::TypeError,
+        action_errors::ActionError, ai_errors::AIError, byte_errors::ByteError,
+        fatal_errors::FatalError, fs_errors::FsError, json_errors::JsonErrors,
+        memory_errors::MemoryError, net_errors::NetErrors, os_errors::OsError,
+        struct_errors::StructError, type_errors::TypeError,
     },
     opcodes::DataType,
     stack::OperandsStackValue,
@@ -195,6 +197,32 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
         message: error.0,
         semantic_message: error.1,
     }
+}
+
+pub fn fatal(error: FatalError) -> ! {
+    match error {
+        FatalError::InvalidPropertyAccess { object, property } => {
+            print_error(
+                "Internal error".to_string(),
+                format!(
+                    "Invalid property access. '{}' does not exist on type '{}'",
+                    object, property
+                ),
+            );
+        }
+        FatalError::InvalidValueUnwrap(value_type) => {
+            print_error(
+                "Internal value unwrap".to_string(),
+                format!("Trying to unwrap to value '{}'\n", value_type),
+            );
+        }
+    }
+    std::process::exit(1);
+}
+
+pub fn print_error(error_msg: String, semantic_msg: String) {
+    let error_msg = format!("{}: {}", error_msg, semantic_msg);
+    eprintln!("\x1b[31m[ERR] \x1b[0m{error_msg}");
 }
 
 #[derive(Debug)]

@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{opcodes::DataType, types::Value};
+use crate::{
+    core::error::{self, fatal_errors::FatalError},
+    opcodes::DataType,
+    types::Value,
+};
 
 #[derive(Debug, Clone)]
 pub struct StructDeclaration {
@@ -33,6 +37,17 @@ impl StructLiteral {
 
     pub fn property_access(&self, property: &str) -> Option<Value> {
         self.fields.get(property).cloned()
+    }
+
+    pub fn unsafe_property_access(&self, property: &str) -> Value {
+        if let Some(field) = self.fields.get(property) {
+            field.clone()
+        } else {
+            error::fatal(FatalError::InvalidPropertyAccess {
+                object: self.struct_type.to_string(),
+                property: property.to_string(),
+            });
+        }
     }
 
     pub fn property_set(&mut self, property: &str, value: Value) {

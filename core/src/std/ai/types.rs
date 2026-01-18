@@ -269,7 +269,7 @@ impl UnfoldStore {
             strings.push(format!(
                 "variable_name: {key}\nthought: {} executed with result in value.\nvalue: {}",
                 entry.origin_thought,
-                entry.value.to_string(vm)
+                entry.value.llm_serialize(vm)
             ));
         }
 

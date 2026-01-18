@@ -1,5 +1,5 @@
 use crate::{
-    core::error::{self, type_errors, VMError, VMErrorType},
+    core::error::{self, fatal_errors::FatalError, type_errors, VMError, VMErrorType},
     std::{
         ai::types::{Action, Chain, Context, Link, SessionEnd},
         buffer::types::Buffer,
@@ -41,6 +41,25 @@ pub enum NativeStruct {
 }
 
 impl NativeStruct {
+    pub fn get_type(&self) -> String {
+        match self {
+            NativeStruct::NetStream(x) => "NetStream".to_string(),
+            NativeStruct::NetServer(x) => "NetStream".to_string(),
+            NativeStruct::Action(x) => "NetStream".to_string(),
+            NativeStruct::Chain(x) => "Chain".to_string(),
+            NativeStruct::Context(x) => "Context".to_string(),
+            NativeStruct::Link(x) => "Link".to_string(),
+            NativeStruct::SessionEnd(x) => "SessionEnd".to_string(),
+            NativeStruct::McpClient(x) => "McpClient".to_string(),
+            NativeStruct::McpTool(x) => "McpTool".to_string(),
+            NativeStruct::NativeLib(x) => "NativeLib".to_string(),
+            NativeStruct::Interval(x) => "Interval".to_string(),
+            NativeStruct::Browser(x) => "Browser".to_string(),
+            NativeStruct::Buffer(x) => "Buffer".to_string(),
+            NativeStruct::HttpResponse(x) => "HttpResponse".to_string(),
+        }
+    }
+
     pub fn to_string(&self, vm: &Vm) -> String {
         match self {
             NativeStruct::NetStream(x) => x.to_string(),
@@ -57,6 +76,25 @@ impl NativeStruct {
             NativeStruct::Browser(x) => x.to_string(vm),
             NativeStruct::Buffer(x) => x.to_string(vm),
             NativeStruct::HttpResponse(x) => x.to_string(vm),
+        }
+    }
+
+    pub fn serialize(&self, vm: &Vm) -> String {
+        match self {
+            NativeStruct::NetStream(x) => x.to_string(),
+            NativeStruct::NetServer(x) => x.to_string(),
+            NativeStruct::Action(x) => x.to_string(vm),
+            NativeStruct::Chain(x) => x.to_string(vm),
+            NativeStruct::Context(x) => x.to_string(vm),
+            NativeStruct::Link(x) => x.to_string(vm),
+            NativeStruct::SessionEnd(x) => x.to_string(),
+            NativeStruct::McpClient(x) => x.to_string(),
+            NativeStruct::McpTool(x) => x.to_string(),
+            NativeStruct::NativeLib(x) => x.to_string(vm),
+            NativeStruct::Interval(x) => x.to_string(vm),
+            NativeStruct::Browser(x) => x.to_string(vm),
+            NativeStruct::Buffer(x) => x.to_string(vm),
+            NativeStruct::HttpResponse(x) => x.serialize(vm),
         }
     }
 
@@ -113,6 +151,27 @@ impl NativeStruct {
                 }),
                 vm,
             )),
+        }
+    }
+
+    pub fn as_buffer(&self, vm: &Vm) -> Result<&Buffer, VMError> {
+        match self {
+            NativeStruct::Buffer(x) => Ok(x),
+            _ => Err(error::throw(
+                VMErrorType::TypeError(type_errors::TypeError::InvalidTypeUnwrap {
+                    expected: "Buffer".to_string(),
+                    received: self.to_string(vm),
+                }),
+                vm,
+            )),
+        }
+    }
+
+    // unsafe methods
+    pub fn unsafe_as_buffer(&self) -> &Buffer {
+        match self {
+            NativeStruct::Buffer(x) => x,
+            _ => error::fatal(FatalError::InvalidValueUnwrap(self.get_type())),
         }
     }
 }
