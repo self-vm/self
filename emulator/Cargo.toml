@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-"selfcli" = { path = "../cli" }
+"ego-compiler" = { path = "../compiler" }
 "self-vm" = { path = "../core" }
 tokio = { version = "1.47.1", features = ["rt-multi-thread"] }

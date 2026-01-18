@@ -11,7 +11,7 @@ async fn main() {
             return;
         }
     };
-    let bytecode = selfcli::gen_bytecode("main".to_string(), contents, &args);
+    let bytecode = ego_compiler::gen_bytecode("main".to_string(), contents, &args);
     let mut vm = self_vm::new(bytecode);
     if args.contains(&"-d".to_string()) {
         vm.debug_bytecode();
