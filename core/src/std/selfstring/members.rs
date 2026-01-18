@@ -1,7 +1,7 @@
 use crate::{
-    core::error::VMError,
+    core::error::{self, type_errors::TypeError, VMError, VMErrorType},
     memory::{Handle, MemObject},
-    std::heap_utils::put_string,
+    std::heap_utils::{put_string, put_vector},
     types::{
         object::func::{Engine, Function},
         raw::{u32::U32, RawValue},
@@ -74,5 +74,52 @@ fn slice(
 
     let new_string = &_self.value[start..end];
     let handle = put_string(vm, new_string.to_string());
+    Ok(Value::Handle(handle))
+}
+
+pub fn split_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "split".to_string(),
+        vec!["delimiter".to_string()],
+        Engine::Native(split),
+    ))
+}
+
+fn split(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    _debug: bool,
+) -> Result<Value, VMError> {
+    if params.is_empty() {
+        return Err(error::throw(
+            VMErrorType::TypeError(TypeError::InvalidArgsCount {
+                expected: 1,
+                received: 0,
+            }),
+            vm,
+        ));
+    }
+
+    let delimiter = params[0].as_string_obj(vm)?;
+
+    // resolve 'self'
+    let self_content = if let Some(_this) = _self {
+        if let MemObject::String(string) = vm.memory.resolve(&_this) {
+            string.value.clone()
+        } else {
+            unreachable!()
+        }
+    } else {
+        unreachable!()
+    };
+
+    let mut parts: Vec<Value> = Vec::new();
+    for s in self_content.split(&delimiter) {
+        let handle = put_string(vm, s.to_string());
+        parts.push(Value::Handle(handle));
+    }
+
+    let handle = put_vector(vm, parts);
     Ok(Value::Handle(handle))
 }

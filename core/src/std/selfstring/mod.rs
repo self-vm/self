@@ -12,6 +12,7 @@ pub fn init_lib() -> Vec<(String, MemObject)> {
 
     fields.push(("len".to_string(), members::len_obj()));
     fields.push(("slice".to_string(), members::slice_obj()));
+    fields.push(("split".to_string(), members::split_obj()));
 
     fields
 }
@@ -26,6 +27,9 @@ pub fn add_handlers(vm: &mut Vm) -> HashMap<String, Value> {
         }
         if let Some(mem) = vm.get_handler("string.slice") {
             loaded_members.insert("slice".to_string(), Value::Handle(mem));
+        }
+        if let Some(mem) = vm.get_handler("string.split") {
+            loaded_members.insert("split".to_string(), Value::Handle(mem));
         }
     } else {
         let fields = init_lib();
