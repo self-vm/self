@@ -159,3 +159,45 @@ fn map_reduce(
         Ok(Value::RawValue(RawValue::Nothing))
     })
 }
+
+// push
+pub fn push_obj() -> MemObject {
+    MemObject::Function(Function::new(
+        "push".to_string(),
+        vec!["value".to_string()],
+        Engine::Native(push),
+    ))
+}
+
+fn push(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    _debug: bool,
+) -> Result<Value, VMError> {
+    // resolve 'self'
+    let _self = if let Some(_this) = _self {
+        if let MemObject::Vector(vec) = vm.memory.resolve_mut(&_this) {
+            vec
+        } else {
+            unreachable!()
+        }
+    } else {
+        unreachable!()
+    };
+
+    if params.is_empty() {
+        return Err(error::throw(
+            VMErrorType::TypeError(TypeError::InvalidArgsCount {
+                expected: 1,
+                received: 0,
+            }),
+            vm,
+        ));
+    }
+
+    let value = params[0].clone();
+    _self.elements.push(value);
+
+    Ok(Value::RawValue(RawValue::Nothing))
+}

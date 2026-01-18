@@ -13,6 +13,7 @@ pub fn init_lib() -> Vec<(String, MemObject)> {
     fields.push(("vector.len".to_string(), members::len_obj()));
     fields.push(("vector.map".to_string(), members::map_obj()));
     fields.push(("vector.map_reduce".to_string(), members::map_reduce_obj()));
+    fields.push(("vector.push".to_string(), members::push_obj()));
 
     fields
 }
@@ -27,6 +28,9 @@ pub fn init_vector_members(vector: &mut Vector, vm: &Vm) {
     }
     if let Some(mem) = vm.get_handler("vector.map_reduce") {
         members.insert("map_reduce".to_string(), Value::Handle(mem));
+    }
+    if let Some(mem) = vm.get_handler("vector.push") {
+        members.insert("push".to_string(), Value::Handle(mem));
     }
 
     vector.init_vector_members(members);
