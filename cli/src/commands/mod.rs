@@ -2,12 +2,14 @@ pub mod compile;
 pub mod logo;
 pub mod new;
 pub mod run;
+pub mod test;
 
 use ego_compiler::core::error::{self, ErrorType};
 
 use self::logo::Logo;
 use self::new::New;
 use self::run::Run;
+use self::test::Test;
 
 use crate::commands::compile::Compile;
 use std::env;
@@ -17,6 +19,7 @@ pub enum Command {
     Logo(Logo),
     New(New),
     Compile(Compile),
+    Test(Test),
     Raw,
 }
 
@@ -39,6 +42,7 @@ impl Command {
             "logo" => Command::Logo(Logo::new(args)),
             "new" => Command::New(New::new(args)),
             "compile" => Command::Compile(Compile::new(args)),
+            "test" => Command::Test(Test::new(args)),
             "ping" => Command::Raw,
             _ => Command::Run(Run::new(
                 [command.to_string()]
@@ -54,6 +58,7 @@ impl Command {
             Command::Logo(v) => v.exec(),
             Command::New(v) => v.exec(),
             Command::Compile(v) => v.exec(),
+            Command::Test(v) => v.exec().await,
             Command::Raw => {
                 println!("pong!")
             }

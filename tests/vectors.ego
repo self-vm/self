@@ -1,0 +1,21 @@
+let v = [1, 2, 3]
+println(v)
+// @expect [
+// @expect     "1",
+// @expect     "2",
+// @expect     "3",
+// @expect ]
+
+let v = [1, 2, 3]
+println(v[2])
+// @expect 3
+
+let v = [1, 2, 3]
+v.push(4)
+println(v)
+// @expect [
+// @expect     "1",
+// @expect     "2",
+// @expect     "3",
+// @expect     "4",
+// @expect ]

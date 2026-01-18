@@ -1,0 +1,23 @@
+let a = 10
+if a > 5 {
+    println("greater")
+} else {
+    println("smaller")
+}
+// @expect greater
+
+if a < 5 {
+    println("greater")
+} else {
+    println("smaller")
+}
+// @expect smaller
+
+let i = 0
+while i < 3 {
+    println(i)
+    i = i + 1
+}
+// @expect 0
+// @expect 1
+// @expect 2

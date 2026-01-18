@@ -811,7 +811,7 @@ impl Module {
 
         // consume expression
         self.next();
-        let expr = self.expression(ExprCtx::default());
+        let expr = self.expression(ExprCtx::new(Position::Condition, Origin::Default));
         let expr_node = match expr {
             AstNodeType::Expression(b) => b,
             _ => {

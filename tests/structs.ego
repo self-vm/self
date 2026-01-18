@@ -1,0 +1,29 @@
+struct Person {
+    name: string,
+    age: number
+}
+
+let p = Person {
+    name: "Alice",
+    age: 30
+}
+
+println(p.name)
+// @expect Alice
+println(p.age)
+// @expect 30
+
+struct Vector2 {
+    x: number,
+    y: number
+}
+
+let v = Vector2 {
+    x: 10,
+    y: 20
+}
+
+println(v.x)
+// @expect 10
+println(v.y)
+// @expect 20

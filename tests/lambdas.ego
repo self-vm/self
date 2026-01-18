@@ -1,0 +1,19 @@
+let o = {
+    greet: () -> {
+        println("hi from object")
+    }
+}
+
+o.greet()
+// @expect hi from object
+
+fn add(a, b) {
+    return a + b
+}
+
+let math = {
+    sum: add
+}
+
+println(math.sum(1, 2))
+// @expect 3

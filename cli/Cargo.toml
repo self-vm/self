@@ -10,3 +10,4 @@ ego-compiler = { path = "../compiler" }
 regex = "1"
 lazy_static = "1.4"
 tokio = { version = "1.47.1", features = ["rt-multi-thread"] }
+colored = "3.1.1"

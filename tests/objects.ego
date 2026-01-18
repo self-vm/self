@@ -1,0 +1,14 @@
+let obj = {
+    a: 1,
+    b: "hello",
+    c: {
+        d: true
+    }
+}
+
+println(obj.a)
+// @expect 1
+println(obj.b)
+// @expect hello
+println(obj.c.d)
+// @expect true

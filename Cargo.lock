@@ -288,6 +288,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "colored"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
+dependencies = [
+ "windows-sys 0.60.2",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1508,6 +1517,7 @@ dependencies = [
 name = "selfcli"
 version = "0.0.0-alpha.0.1"
 dependencies = [
+ "colored",
  "ego-compiler",
  "lazy_static",
  "regex",

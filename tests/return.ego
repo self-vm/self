@@ -1,0 +1,11 @@
+fn get_greeting(name) {
+    if name == "Alice" {
+        return "Hello Alice!"
+    }
+    return "Hello Stranger"
+}
+
+println(get_greeting("Alice"))
+// @expect Hello Alice!
+println(get_greeting("Bob"))
+// @expect Hello Stranger
