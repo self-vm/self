@@ -11,6 +11,7 @@ pub mod group;
 pub mod identifier;
 pub mod if_statement;
 pub mod import_statement;
+pub mod index_expression;
 pub mod lambda_expression;
 pub mod member_expression;
 pub mod module;
@@ -40,7 +41,7 @@ use self::{
     identifier::Identifier, if_statement::IfStatement, import_statement::ImportStatement,
     nothing::Nothing, number::Number, return_statement::ReturnStatement,
     string_literal::StringLiteral, unary_expression::UnaryExpression, vector::Vector,
-    while_statement::WhileStatement,
+    while_statement::WhileStatement, index_expression::IndexExpression,
 };
 
 #[derive(Debug, Clone)]
@@ -140,6 +141,9 @@ impl fmt::Display for AstNodeType {
             AstNodeType::Expression(Expression::UnaryExpression(_)) => {
                 write!(f, "UnaryExpression")
             }
+            AstNodeType::Expression(Expression::IndexExpression(_)) => {
+                write!(f, "IndexExpression")
+            }
         }
     }
 }
@@ -165,6 +169,7 @@ pub enum Expression {
     MemberExpression(MemberExpression),
     LambdaExpression(LambdaExpression),
     Vector(Vector),
+    IndexExpression(IndexExpression),
     Nothing(Nothing),
 }
 

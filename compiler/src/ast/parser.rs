@@ -26,6 +26,7 @@ use crate::{
 use super::{
     Type, binary_expression::BinaryExpression, break_statement::BreakStatement,
     else_statement::ElseStatement, if_statement::IfStatement, import_statement::ImportStatement,
+    index_expression::IndexExpression,
     nothing::Nothing, return_statement::ReturnStatement, unary_expression::UnaryExpression,
     vector::Vector, while_statement::WhileStatement,
 };
@@ -401,6 +402,10 @@ impl Module {
                         Expression::UnaryExpression(_) => {
                             // use identifier as a fallback
                             last_token = Some(LexerTokenType::TrueKeyword)
+                        }
+                        Expression::IndexExpression(_) => {
+                            // use identifier as a fallback
+                            last_token = Some(LexerTokenType::Identifier)
                         }
                     }
                     group_node.add_child(Some(node));
@@ -979,7 +984,7 @@ impl Module {
             }
         }
 
-        let node = self.parse_postfix_expression(ctx);
+        let node = self.parse_factor(ctx);
         AstNodeType::Expression(node)
     }
 
@@ -1088,8 +1093,7 @@ impl Module {
                 let group_node = self.group(None);
 
                 if self.is_peekable() && self.unsafe_peek().token_type == LexerTokenType::Arrow {
-                    let lambda_node = self.lambda_expression(group_node);
-                    lambda_node
+                    self.lambda_expression(group_node)
                 } else {
                     if group_node.children.len() == 1 {
                         if let Some(Some(child)) = group_node.children.first() {
@@ -1164,6 +1168,7 @@ impl Module {
                 if let Some(next) = self.peek_next() {
                     if next.token_type == LexerTokenType::OpenParenthesis
                         || next.token_type == LexerTokenType::Dot
+                        || next.token_type == LexerTokenType::OpenSquareBracket
                     {
                         self.parse_postfix_expression(ctx)
                     } else if next.token_type == LexerTokenType::OpenCurlyBrace
@@ -1211,15 +1216,30 @@ impl Module {
             }
         };
 
-        expr
+        self.parse_postfix_expression(expr, ctx)
     }
 
-    // a.b()
-    fn parse_postfix_expression(&self, ctx: ExprCtx) -> Expression {
-        let mut expr = self.member_expression(ctx);
+    // a.b()[0]
+    fn parse_postfix_expression(&self, mut expr: Expression, ctx: ExprCtx) -> Expression {
         while self.is_peekable() {
             let next = self.unsafe_peek();
             match next.token_type {
+                LexerTokenType::Dot => {
+                    self.next(); // consume dot
+                    let identifier_token = self.peek("<identifier>");
+                    let identifier_node = Identifier::new(
+                        identifier_token.value.clone(),
+                        identifier_token.at,
+                        identifier_token.line,
+                    );
+                    expr = Expression::MemberExpression(MemberExpression::new(
+                        Box::new(expr),
+                        identifier_node,
+                        identifier_token.at,
+                        identifier_token.line,
+                    ));
+                    self.next(); // consume identifier
+                }
                 LexerTokenType::OpenParenthesis => {
                     let group_node = self.group(Some("call expression"));
                     expr = Expression::CallExpression(CallExpression::new(
@@ -1257,6 +1277,28 @@ impl Module {
                     ));
                     break; // after struct literal is not another member_expression enabled
                 }
+                LexerTokenType::OpenSquareBracket => {
+                    self.next(); // consume '['
+                    let index_expr = self.parse_comparison(ctx);
+
+                    // check ']'
+                    let close_token = self.peek("]");
+                    if close_token.token_type != LexerTokenType::CloseSquareBracket {
+                        error::throw(
+                            ErrorType::SyntaxError,
+                            format!("Expected ']' but got '{}'", close_token.value).as_str(),
+                            Some(close_token.line),
+                        )
+                    }
+                    self.next(); // consume ']'
+
+                    expr = Expression::IndexExpression(IndexExpression::new(
+                        Box::new(expr),
+                        Box::new(index_expr),
+                        next.at,
+                        next.line,
+                    ));
+                }
                 _ => break,
             }
         }
@@ -1265,44 +1307,8 @@ impl Module {
     }
 
     // person.name.to_string
-    fn member_expression(&self, ctx: ExprCtx) -> Expression {
-        // get the identifier
-        let identifier_token = self.unsafe_peek();
-        let mut node = Expression::Identifier(Identifier::new(
-            identifier_token.value.clone(),
-            identifier_token.at,
-            identifier_token.line,
-        ));
-        self.next();
-
-        while self.is_peekable() {
-            if let LexerTokenType::Dot = self.unsafe_peek().token_type {
-                // consume dot
-                self.next();
-
-                // get the identifier
-                let identifier_token = self.peek("<identifier>");
-                let identifier_node = Identifier::new(
-                    identifier_token.value.clone(),
-                    identifier_token.at,
-                    identifier_token.line,
-                );
-
-                node = Expression::MemberExpression(MemberExpression::new(
-                    Box::new(node.clone()),
-                    identifier_node,
-                    identifier_token.at,
-                    identifier_token.line,
-                ));
-                // consume identifier
-                self.next();
-            } else {
-                // end of member expression
-                break;
-            }
-        }
-
-        node
+    fn member_expression(&self, _ctx: ExprCtx) -> Expression {
+        unreachable!("member_expression is deprecated, use parse_postfix_expression instead")
     }
 
     // () -> {...}
@@ -1419,6 +1425,9 @@ impl Module {
                         Expression::LambdaExpression(_) => last_token = Some(LexerTokenType::Arrow),
                         Expression::UnaryExpression(_) => {
                             last_token = Some(LexerTokenType::TrueKeyword)
+                        }
+                        Expression::IndexExpression(_) => {
+                            last_token = Some(LexerTokenType::Identifier)
                         }
                     }
                     vector_node.add_child(node);

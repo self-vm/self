@@ -3,6 +3,7 @@ use tokio::sync::mpsc;
 
 use crate::core::error::struct_errors::StructError;
 use crate::core::error::type_errors::TypeError;
+use crate::core::error::vector_errors::VectorError;
 use crate::core::error::InvalidBinaryOperation;
 use crate::core::error::VMErrorType;
 use crate::core::execution::VMExecutionResult;
@@ -577,6 +578,81 @@ impl Vm {
                         } else {
                             // TODO: use self-vm errors
                             panic!("Struct literal field must be indexed by string")
+                        }
+
+                        self.pc += 1;
+                    }
+                    Opcode::GetIndex => {
+                        let values = self.get_stack_values(&2);
+                        let object_val = &values[0];
+                        let index_val = &values[1];
+
+                        // resolve index as usize
+                        let index = match self.unwrap_bound_access(index_val.clone()).as_usize(self)
+                        {
+                            Ok(v) => v,
+                            Err(err) => {
+                                return VMExecutionResult::terminate_with_errors(err.error_type, self)
+                            }
+                        };
+
+                        // resolve object (Vector or String)
+                        let unwrapped_object = self.unwrap_bound_access(object_val.clone());
+                        let (object_handle, resolved_object) = match unwrapped_object {
+                            Value::Handle(h) => (h.clone(), self.memory.resolve(&h)),
+                            _ => {
+                                let error = VMErrorType::TypeMismatch {
+                                    expected: "Vector or String".to_string(),
+                                    received: unwrapped_object.get_type(),
+                                };
+                                return VMExecutionResult::terminate_with_errors(error, self);
+                            }
+                        };
+
+                        match resolved_object {
+                            MemObject::Vector(v) => {
+                                if index >= v.elements.len() {
+                                    return VMExecutionResult::terminate_with_errors(
+                                        VMErrorType::Vector(VectorError::IndexOutOfBounds {
+                                            index,
+                                            length: v.elements.len(),
+                                        }),
+                                        self,
+                                    );
+                                }
+                                let val = v.elements[index].clone();
+                                let bound_access =
+                                    BoundAccess::new(object_handle.clone(), Box::new(val));
+                                self.push_to_stack(
+                                    Value::BoundAccess(bound_access),
+                                    Some(format!("{}[{}]", object_val.to_string(self), index)),
+                                );
+                            }
+                            MemObject::String(s) => {
+                                if index >= s.value.len() {
+                                    return VMExecutionResult::terminate_with_errors(
+                                        VMErrorType::Vector(VectorError::IndexOutOfBounds {
+                                            index,
+                                            length: s.value.len(),
+                                        }),
+                                        self,
+                                    );
+                                }
+                                let char_str = s.value.chars().nth(index).unwrap().to_string();
+                                let char_handle = crate::std::heap_utils::put_string(self, char_str);
+
+                                self.push_to_stack(
+                                    Value::Handle(char_handle),
+                                    Some(format!("{}[{}]", object_val.to_string(self), index)),
+                                );
+                            }
+                            _ => {
+                                let error = VMErrorType::TypeMismatch {
+                                    expected: "Vector or String".to_string(),
+                                    received: resolved_object.get_type(),
+                                };
+                                return VMExecutionResult::terminate_with_errors(error, self);
+                            }
                         }
 
                         self.pc += 1;

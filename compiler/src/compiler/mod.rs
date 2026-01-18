@@ -493,6 +493,17 @@ impl Compiler {
                 bytecode.extend_from_slice(&property_bytecode);
                 bytecode.push(get_bytecode("get_property".to_string()));
             }
+            Expression::IndexExpression(v) => {
+                let object = v.object.clone();
+                let index = v.index.clone();
+
+                let object_bytecode = Compiler::compile_expression(&object, false);
+                let index_bytecode = Compiler::compile_expression(&index, false);
+
+                bytecode.extend_from_slice(&object_bytecode);
+                bytecode.extend_from_slice(&index_bytecode);
+                bytecode.push(get_bytecode("get_index".to_string()));
+            }
             Expression::Nothing(_) => {
                 bytecode.push(get_bytecode("load_const".to_string()));
                 bytecode.push(get_bytecode("nothing".to_string()));

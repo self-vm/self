@@ -13,7 +13,6 @@ pub fn lex(source: String) -> Vec<LexerToken> {
     let mut current_token = String::new();
     let mut is_string = false; // inside a string flag
     let mut is_comment = false; // inside a comment
-    let mut is_float = false; // inside a float value
 
     let mut chars = source.chars().peekable(); // remove leading and trailing whitespaces
     let mut char_counter = 1; // all module chars number
@@ -33,13 +32,6 @@ pub fn lex(source: String) -> Vec<LexerToken> {
                 is_string = false;
             } else {
                 current_token.push(c);
-            }
-        } else if is_float {
-            if c.is_numeric() && chars.peek().is_some_and(|char| char.is_numeric()) {
-                current_token.push(c);
-            } else {
-                current_token.push(c);
-                is_float = false;
             }
         } else {
             // normal mode
@@ -285,24 +277,27 @@ pub fn lex(source: String) -> Vec<LexerToken> {
                 }
                 // dot and float
                 '.' => {
-                    if current_token.chars().all(|char| char.is_numeric()) {
+                    if current_token.len() > 0
+                        && current_token.chars().all(|char| char.is_numeric())
+                        && chars.peek().is_some_and(|c| c.is_numeric())
+                    {
                         current_token.push(c);
-                        is_float = !is_float;
                     } else {
                         // prev dot
-                        tokens.push(token_with_type(
-                            current_token,
-                            line_counter,
-                            line_char_counter,
-                        ));
+                        if current_token.len() > 0 {
+                            tokens.push(token_with_type(
+                                current_token,
+                                line_counter,
+                                line_char_counter,
+                            ));
+                            current_token = String::new();
+                        }
                         // dot
                         tokens.push(token_with_type(
                             String::from(c),
                             line_counter,
                             line_char_counter,
                         ));
-                        // post dot
-                        current_token = String::new();
                     }
                 }
                 // whitespace types

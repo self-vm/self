@@ -9,6 +9,7 @@ pub mod net_errors;
 pub mod os_errors;
 pub mod struct_errors;
 pub mod type_errors;
+pub mod vector_errors;
 
 use crate::{
     core::error::{
@@ -16,6 +17,7 @@ use crate::{
         fatal_errors::FatalError, fs_errors::FsError, json_errors::JsonErrors,
         memory_errors::MemoryError, net_errors::NetErrors, os_errors::OsError,
         struct_errors::StructError, type_errors::TypeError,
+        vector_errors::VectorError,
     },
     stack::OperandsStackValue,
     vm::Vm,
@@ -42,6 +44,7 @@ pub enum VMErrorType {
     Struct(StructError),
     Memory(MemoryError),
     Json(JsonErrors),
+    Vector(VectorError),
     Any(String),
 }
 
@@ -187,6 +190,12 @@ pub fn throw(error_type: VMErrorType, vm: &Vm) -> VMError {
             JsonErrors::EncodingError(v) => (
                 "Json encoding error".to_string(),
                 format!("cannot encode {}", v),
+            ),
+        },
+        VMErrorType::Vector(ve) => match ve {
+            VectorError::IndexOutOfBounds { index, length } => (
+                "Index out of bounds".to_string(),
+                format!("index {} is out of bounds for vector of length {}", index, length),
             ),
         },
         VMErrorType::Any(s) => ("Error".to_string(), format!("{}", s)),
