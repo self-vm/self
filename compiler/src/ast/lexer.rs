@@ -27,10 +27,32 @@ pub fn lex(source: String) -> Vec<LexerToken> {
                 line_char_counter = 0;
             }
         } else if is_string {
-            if c == '"' {
+            if c == '\\' {
+                if let Some(next) = chars.next() {
+                    match next {
+                        'n' => current_token.push('\n'),
+                        't' => current_token.push('\t'),
+                        'r' => current_token.push('\r'),
+                        '\\' => current_token.push('\\'),
+                        '"' => current_token.push('"'),
+                        _ => {
+                            current_token.push('\\');
+                            current_token.push(next);
+                        }
+                    }
+                    char_counter += 1;
+                    line_char_counter += 1;
+                } else {
+                    current_token.push('\\');
+                }
+            } else if c == '"' {
                 current_token.push(c);
                 is_string = false;
             } else {
+                if c == '\n' {
+                    line_counter += 1;
+                    line_char_counter = 0;
+                }
                 current_token.push(c);
             }
         } else {
