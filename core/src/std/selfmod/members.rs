@@ -1,3 +1,6 @@
+use futures::future::BoxFuture;
+use tokio::time::{self, Duration};
+
 use crate::{
     core::error::VMError,
     memory::{Handle, MemObject},
@@ -48,5 +51,35 @@ pub fn get_stack_fn_ref() -> MemObject {
         "get_stack".to_string(),
         vec![], // TODO: load params to native functions
         Engine::Native(get_stack),
+    ))
+}
+
+pub fn sleep(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    _debug: bool,
+) -> BoxFuture<Result<Value, VMError>> {
+    Box::pin(async move {
+        if params.len() < 1 {
+            return Ok(Value::RawValue(RawValue::Nothing));
+        }
+
+        let ms = match params[0].as_usize(vm) {
+            Ok(v) => v,
+            Err(_) => 0,
+        };
+
+        time::sleep(Duration::from_millis(ms as u64)).await;
+
+        Ok(Value::RawValue(RawValue::Nothing))
+    })
+}
+
+pub fn sleep_ref() -> MemObject {
+    MemObject::Function(Function::new(
+        "sleep".to_string(),
+        vec!["milliseconds".to_string()],
+        Engine::NativeAsync(sleep),
     ))
 }
