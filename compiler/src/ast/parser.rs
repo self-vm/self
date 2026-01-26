@@ -1174,6 +1174,8 @@ impl Module {
                             token.at,
                             token.line,
                         ));
+                        self.next(); // consume identifier
+
                         self.parse_postfix_expression(identifier, ctx)
                     } else if next.token_type == LexerTokenType::OpenCurlyBrace
                         && ctx.allow_struct_literal
