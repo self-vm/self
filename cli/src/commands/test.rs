@@ -99,11 +99,12 @@ impl Test {
             .collect();
 
         // Run the CLI
-        // Using `cargo run --quiet -- run <path>` to ensure we use the current source.
-        let output = Command::new("cargo")
-            .args(["run", "--quiet", "--", "run", path.to_str().unwrap()])
+        // Using the current executable to run the test file.
+        let current_exe = std::env::current_exe().map_err(|e| format!("Failed to get current executable path: {}", e))?;
+        let output = Command::new(current_exe)
+            .args(["run", path.to_str().unwrap()])
             .output()
-            .map_err(|e| format!("Failed to execute cargo: {}", e))?;
+            .map_err(|e| format!("Failed to execute binary: {}", e))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
