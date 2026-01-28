@@ -4,7 +4,7 @@ echo -e "\n packaging self \n"
 cargo build --release 
 
 mkdir -p out
-cp target/release/selfcli out/self
+cp target/release/self-cli out/self
 strip out/self
 
 echo -e "
