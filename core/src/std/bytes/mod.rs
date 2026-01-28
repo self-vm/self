@@ -1,13 +1,9 @@
-use std::collections::HashMap;
 
 use crate::{
     core::error::{self, byte_errors::ByteError, VMError, VMErrorType},
     memory::{Handle, MemObject},
     types::{
-        object::{
-            func::{Engine, Function},
-            vector::Vector,
-        },
+        object::func::{Engine, Function},
         raw::{byte::Byte, RawValue},
         Value,
     },

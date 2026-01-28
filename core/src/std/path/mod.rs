@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::core::error::{self, VMError, VMErrorType};
+use crate::core::error::VMError;
 use crate::memory::{Handle, MemObject};
 use crate::std::heap_utils::put_string;
 use crate::std::{NativeMember, NativeModuleDef};

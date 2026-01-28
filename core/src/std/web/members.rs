@@ -1,20 +1,15 @@
-use std::{thread::sleep, time::Duration};
 
-use chromiumoxide::{Browser as ChromiumBrowser, BrowserConfig};
 use futures::future::BoxFuture;
-use futures::StreamExt;
 
 use crate::{
-    core::error::{self, net_errors::NetErrors, type_errors::TypeError, VMError, VMErrorType},
+    core::error::VMError,
     memory::{Handle, MemObject},
     std::{web::types::Browser, NativeMember},
     types::{
         object::{
             func::{Engine, Function},
             native_struct::NativeStruct,
-            string::SelfString,
         },
-        raw::{u32::U32, RawValue},
         Value,
     },
     vm::Vm,

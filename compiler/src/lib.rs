@@ -3,8 +3,8 @@ pub mod compiler;
 pub mod core;
 pub mod utils;
 
-use std::path::{Path, PathBuf};
-use std::{env, fs};
+use std::path::PathBuf;
+use std::fs;
 
 use crate::ast::{Module, lex};
 use crate::compiler::Compiler;

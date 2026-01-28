@@ -1,15 +1,12 @@
-use std::{collections::HashMap, thread::sleep, time::Duration};
+use std::collections::HashMap;
 
-use chromiumoxide::{Browser as ChromiumBrowser, BrowserConfig, Handler};
+use chromiumoxide::{Browser as ChromiumBrowser, BrowserConfig};
 use futures::future::BoxFuture;
 
 use crate::{
-    core::{
-        error::{self, net_errors::NetErrors, type_errors::TypeError, VMError, VMErrorType},
-        handlers,
-    },
+    core::error::{self, type_errors::TypeError, VMError, VMErrorType},
     memory::{Handle, MemObject},
-    std::{ai::types::SessionEnd, NativeMember, NativeModuleDef, NativeStructDef},
+    std::{ai::types::SessionEnd, NativeMember, NativeStructDef},
     types::{
         object::{
             func::{Engine, Function},
@@ -17,7 +14,7 @@ use crate::{
             string::SelfString,
             structs::StructLiteral,
         },
-        raw::{bool::Bool, u32::U32, RawValue},
+        raw::{bool::Bool, RawValue},
         Value,
     },
     vm::Vm,

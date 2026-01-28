@@ -1,7 +1,7 @@
 use std::env;
 use std::{collections::HashMap, path::PathBuf};
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{
     memory::{Handle, MemObject},

@@ -9,7 +9,7 @@ use crate::{
         call_expression::CallExpression,
         export_statement::ExportStatement,
         function_declaration::FunctionDeclaration,
-        group::{self, Group},
+        group::Group,
         identifier::Identifier,
         import_statement::ModuleType,
         lambda_expression::LambdaExpression,

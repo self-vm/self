@@ -1,7 +1,7 @@
-use crate::{memory::MemObject, std::NativeModuleDef};
+use crate::memory::MemObject;
 pub mod members;
 
-use members::{encode_obj, decode_obj};
+use members::encode_obj;
 
 pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     let mut fields = vec![];

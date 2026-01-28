@@ -169,7 +169,7 @@ pub fn decode(
 
 /// Converts a serde_json::Value to a self value
 fn json_to_value(vm: &mut Vm, json: &JsonValue) -> Result<Value, VMError> {
-    use crate::types::raw::{bool::Bool, f64::F64, i64::I64, utf8::Utf8};
+    use crate::types::raw::{bool::Bool, f64::F64, i64::I64};
 
     match json {
         JsonValue::Null => Ok(Value::RawValue(RawValue::Nothing)),

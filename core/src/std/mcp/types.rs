@@ -4,7 +4,6 @@ use futures::lock::Mutex;
 use rmcp::{model::InitializeRequestParam, service::RunningService, RoleClient};
 
 use crate::{
-    memory::MemObject,
     std::{
         heap_utils::put_string,
         mcp::members::{list_tools_obj, shutdown_obj},

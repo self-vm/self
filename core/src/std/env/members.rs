@@ -1,6 +1,5 @@
 use crate::{
     core::error::{self, fs_errors::FsError, type_errors::TypeError, VMError, VMErrorType},
-    heap::HeapRef,
     memory::{Handle, MemObject},
     types::{
         object::{

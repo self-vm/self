@@ -1,13 +1,12 @@
-use std::collections::btree_map;
 
 use crate::{
-    ast::{Expression, call_expression::CallExpression},
-    compiler::{self, Compiler, bytecode::get_bytecode},
+    ast::call_expression::CallExpression,
+    compiler::{self, bytecode::get_bytecode},
 };
 
 use crate::utils::{
     Number,
-    to_bytes::{bytes_from_32, bytes_from_64, bytes_from_utf8},
+    to_bytes::bytes_from_32,
 };
 
 pub fn print_as_bytecode(node: &CallExpression) -> Vec<u8> {

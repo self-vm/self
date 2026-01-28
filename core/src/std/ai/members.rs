@@ -1,7 +1,7 @@
 use std::vec;
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
-use ego_compiler::{unsafe_compile_block, unsafe_compile_block_from_str};
+use ego_compiler::unsafe_compile_block_from_str;
 use futures::future::BoxFuture;
 use serde_json::Value as SValue;
 
@@ -22,8 +22,7 @@ use crate::{
         },
         gen_native_modules_defs, generate_native_module, get_native_module_type,
         heap_utils::put_string,
-        utils::cast_json_value,
-        vector, NativeMember,
+        utils::cast_json_value, NativeMember,
     },
     types::{
         object::{
@@ -32,7 +31,7 @@ use crate::{
             string::SelfString,
             vector::Vector,
         },
-        raw::{bool::Bool, f64::F64, utf8::Utf8, RawValue},
+        raw::{bool::Bool, f64::F64, RawValue},
         Value,
     },
     vm::Vm,

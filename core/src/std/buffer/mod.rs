@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    core::error::{self, byte_errors::ByteError, VMError, VMErrorType},
+    core::error::VMError,
     memory::{Handle, MemObject},
     std::buffer::types::{as_string_obj, Buffer},
     types::{
@@ -10,7 +10,6 @@ use crate::{
             native_struct::NativeStruct,
             structs::StructLiteral,
         },
-        raw::{byte::Byte, RawValue},
         Value,
     },
     vm::Vm,

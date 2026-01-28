@@ -1,11 +1,11 @@
 use crate::{
-    ast::{Expression, call_expression::CallExpression},
+    ast::call_expression::CallExpression,
     compiler::{Compiler, bytecode::get_bytecode},
 };
 
 use crate::utils::{
     Number,
-    to_bytes::{bytes_from_32, bytes_from_64, bytes_from_utf8},
+    to_bytes::bytes_from_32,
 };
 
 pub fn call_as_bytecode(node: &CallExpression) -> Vec<u8> {

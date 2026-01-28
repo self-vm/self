@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    memory::{Handle, MemObject},
+    memory::MemObject,
     types::Value,
     vm::Vm,
 };
