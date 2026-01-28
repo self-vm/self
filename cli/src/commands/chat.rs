@@ -9,7 +9,7 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -160,7 +160,11 @@ impl Chat {
                 if let Event::Key(key) = event::read().unwrap() {
                     match key.code {
                         KeyCode::Char(c) => {
-                            app.input.push(c);
+                            if c == 'c' && key.modifiers.contains(KeyModifiers::CONTROL) {
+                                app.should_quit = true;
+                            } else {
+                                app.input.push(c);
+                            }
                         }
                         KeyCode::Backspace => {
                             app.input.pop();
