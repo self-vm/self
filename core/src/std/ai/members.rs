@@ -1,7 +1,7 @@
 use std::vec;
 use std::{collections::HashMap, path::Path};
 
-use ego_compiler::{unsafe_compile_block};
+use ego_compiler::{unsafe_compile_block, unsafe_compile_block_from_str};
 use futures::future::BoxFuture;
 use serde_json::Value as SValue;
 
@@ -864,8 +864,8 @@ pub fn default_unfold_obj() -> MemObject {
 }
 
 pub fn default_unfold() -> Vec<u8> {
-    let dir = Path::new(std::file!()).parent().unwrap();
-    unsafe_compile_block("unfold.ego", Path::join(dir, "./unfold.ego"))
+    let content = include_str!("./unfold.ego");
+    unsafe_compile_block_from_str("unfold.ego", content.to_string())
 }
 
 // Action type methods
@@ -1072,7 +1072,7 @@ fn enter_session_mode(vm: &mut Vm, conclusion: &Value) -> Option<(String, String
     return Some((instance_name, defs));
 }
 
-fn get_stdlib_defs() -> Vec<String> {
+pub fn get_stdlib_defs() -> Vec<String> {
     gen_native_modules_defs()
         .iter()
         .map(|nm| nm.to_string())

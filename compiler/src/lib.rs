@@ -47,6 +47,15 @@ pub fn unsafe_compile_block(module_name: &str, module_path: PathBuf) -> Vec<u8> 
     let block_node = module.parse_block();
 
     let bytecode = Compiler::compile_block(&block_node);
+    bytecode
+}
+
+pub fn unsafe_compile_block_from_str(module_name: &str, file_content: String) -> Vec<u8> {
+    let tokens = lex(file_content);
+    let mut module = Module::new(module_name.to_string(), tokens);
+    let block_node = module.parse_block();
+
+    let bytecode = Compiler::compile_block(&block_node);
 
     bytecode
 }
