@@ -5,7 +5,7 @@ use crate::{
     memory::{Handle, MemObject},
     types::{
         object::func::{Engine, Function},
-        raw::{u32::U32, RawValue},
+        raw::{i32::I32, RawValue},
         Value,
     },
     vm::Vm,
@@ -36,8 +36,8 @@ fn len(
         unreachable!()
     };
 
-    Ok(Value::RawValue(RawValue::U32(U32::new(
-        _self.elements.len() as u32,
+    Ok(Value::RawValue(RawValue::I32(I32::new(
+        _self.elements.len() as i32,
     ))))
 }
 
