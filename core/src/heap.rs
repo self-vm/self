@@ -40,7 +40,13 @@ impl Heap {
         self.memory.remove(&heap_ref.address)
     }
 
-    // we do not free memory for the moment xD
+    pub fn len(&self) -> usize {
+        self.memory.len()
+    }
+
+    pub fn drain(&mut self) {
+        self.memory.clear();
+    }
 }
 
 impl HeapRef {

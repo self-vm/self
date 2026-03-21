@@ -19,6 +19,9 @@ impl Run {
     pub fn debug(&self) -> bool {
         self.args.contains(&"-d".to_string())
     }
+    pub fn memcheck(&self) -> bool {
+        self.args.contains(&"--memcheck".to_string())
+    }
     pub async fn exec(&self) {
         let module_name = if self.args.len() > 0 {
             self.args[0].clone()
@@ -41,6 +44,10 @@ impl Run {
             if let Some(err) = execution.error {
                 let error_msg = format!("{}: {}", err.message, err.semantic_message);
                 eprintln!("\x1b[31m[ERR] \x1b[0m{error_msg}");
+            }
+            if self.memcheck() {
+                vm.cleanup();
+                vm.memory_stats().print();
             }
             return;
         }
@@ -74,6 +81,10 @@ impl Run {
         if let Some(err) = execution.error {
             let error_msg = format!("{}: {}", err.message, err.semantic_message);
             eprintln!("\x1b[31m[ERR] \x1b[0m{error_msg}");
+        }
+        if self.memcheck() {
+            vm.cleanup();
+            vm.memory_stats().print();
         }
     }
 }

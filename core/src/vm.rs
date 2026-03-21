@@ -205,11 +205,10 @@ impl Vm {
                             let datatype = v.value.get_type();
                             let printable_value = v.value.to_string(self);
                             match &v.value {
-                                Value::Handle(h) => {
-                                    let result = self.memory.retain(&h);
-                                    if let Err(err) = result {
-                                        return VMExecutionResult::terminate_with_errors(err, self);
-                                    }
+                                // push_to_stack already retained the handle when it was
+                                // pushed onto the operand stack; STORE_VAR just transfers
+                                // that ownership into the frame (no extra retain needed)
+                                Value::Handle(_) => {
                                     self.call_stack
                                         .put_to_frame(identifier_name.clone(), v.value.clone());
                                 }
@@ -236,14 +235,14 @@ impl Vm {
                         self.pc += 1;
                     }
                     Opcode::Drop => {
-                        self.operand_stack.pop();
+                        self.pop_from_stack();
                         self.pc += 1;
                     }
                     Opcode::JumpIfFalse => {
                         let offset = Vm::read_offset(&self.bytecode[self.pc + 1..self.pc + 5]);
                         self.pc += 4;
 
-                        let condition = self.operand_stack.pop();
+                        let condition = self.pop_from_stack();
                         if condition.is_none() {
                             panic!("stack underflow");
                         };
@@ -299,28 +298,32 @@ impl Vm {
                         self.pc = target_pc as usize;
                     }
                     Opcode::Print => {
-                        self.pc += 1; // consume print opcode
+                        self.pc += 1;
                         let args = self.get_function_call_args();
                         let mut resolved_args = Vec::new();
-                        for val in args {
-                            match self.value_to_string(val) {
+                        for val in &args {
+                            match self.value_to_string(val.clone()) {
                                 Ok(v) => resolved_args.push(v),
                                 Err(e) => return VMExecutionResult::terminate_with_errors(e, self),
                             }
                         }
                         print_handler(resolved_args, debug, false);
+                        // args were consumed by the native handler — release their push retains
+                        self.release_values(&args);
                     }
                     Opcode::Println => {
-                        self.pc += 1; // consume print opcode
+                        self.pc += 1;
                         let args = self.get_function_call_args();
                         let mut resolved_args = Vec::new();
-                        for val in args {
-                            match self.value_to_string(val) {
+                        for val in &args {
+                            match self.value_to_string(val.clone()) {
                                 Ok(v) => resolved_args.push(v),
                                 Err(e) => return VMExecutionResult::terminate_with_errors(e, self),
                             }
                         }
                         print_handler(resolved_args, debug, true);
+                        // args were consumed by the native handler — release their push retains
+                        self.release_values(&args);
                     }
                     Opcode::FuncDec => {
                         // skip FuncDec opcode
@@ -580,6 +583,15 @@ impl Vm {
                             panic!("Struct literal field must be indexed by string")
                         }
 
+                        // Release the push_to_stack retains from the two raw-popped values.
+                        // The BoundAccess now holds the object reference; it doesn't own
+                        // an extra retain (push_to_stack doesn't retain BoundAccess).
+                        for v in &values {
+                            if let Value::Handle(h) = v {
+                                let _ = self.memory.release(h);
+                            }
+                        }
+
                         self.pc += 1;
                     }
                     Opcode::GetIndex => {
@@ -655,12 +667,29 @@ impl Vm {
                             }
                         }
 
+                        // Release the push_to_stack retain for the object handle (raw-popped)
+                        if let Value::Handle(h) = &values[0] {
+                            let _ = self.memory.release(h);
+                        }
+
                         self.pc += 1;
                     }
                     Opcode::Call => {
                         self.pc += 1;
                         let args = self.get_function_call_args();
                         let callee_value = self.get_stack_values(&1);
+
+                        // For named function calls the callee is a Handle(String) that was
+                        // pushed via push_to_stack (retained). We raw-pop it here, so we
+                        // must release that retain after the call. Save a copy now, before
+                        // the handle is moved into the match arms below.
+                        // For BoundAccess calls, GetProperty already released the object
+                        // handle's push retain — nothing extra to release here.
+                        let caller_handle_to_release = match &callee_value[0] {
+                            Value::Handle(h) => Some(h.clone()),
+                            _ => None,
+                        };
+
                         let ((caller_obj, caller_handle), callee_handle): (
                             (&MemObject, Handle),
                             Option<Handle>,
@@ -757,13 +786,13 @@ impl Vm {
                                                                 self
                                                             );
                                                     }
-                                                    if let Some(returned_value) =
-                                                        &exec_result.result
-                                                    {
-                                                        self.push_to_stack(
-                                                            returned_value.clone(),
-                                                            Some(func.identifier.clone()),
-                                                        );
+                                                    if let Some(returned_value) = exec_result.result {
+                                                        // Direct push: the callee's push_to_stack
+                                                        // already retained this handle; no extra retain
+                                                        self.operand_stack.push(OperandsStackValue {
+                                                            value: returned_value,
+                                                            origin: Some(func.identifier.clone()),
+                                                        });
                                                     }
                                                 } else {
                                                     return VMExecutionResult::terminate_with_errors(
@@ -813,11 +842,11 @@ impl Vm {
                                             self,
                                         );
                                     }
-                                    if let Some(returned_value) = &exec_result.result {
-                                        self.push_to_stack(
-                                            returned_value.clone(),
-                                            Some(func.identifier.clone()),
-                                        );
+                                    if let Some(returned_value) = exec_result.result {
+                                        self.operand_stack.push(OperandsStackValue {
+                                            value: returned_value,
+                                            origin: Some(func.identifier.clone()),
+                                        });
                                     }
                                 } else {
                                     return VMExecutionResult::terminate_with_errors(
@@ -848,11 +877,11 @@ impl Vm {
                                             self,
                                         );
                                     }
-                                    if let Some(returned_value) = &exec_result.result {
-                                        self.push_to_stack(
-                                            returned_value.clone(),
-                                            Some(func.identifier.clone()),
-                                        );
+                                    if let Some(returned_value) = exec_result.result {
+                                        self.operand_stack.push(OperandsStackValue {
+                                            value: returned_value,
+                                            origin: Some(func.identifier.clone()),
+                                        });
                                     }
                                 } else {
                                     return VMExecutionResult::terminate_with_errors(
@@ -888,11 +917,11 @@ impl Vm {
                                             self,
                                         );
                                     }
-                                    if let Some(returned_value) = &exec_result.result {
-                                        self.push_to_stack(
-                                            returned_value.clone(),
-                                            Some(func.identifier.clone()),
-                                        );
+                                    if let Some(returned_value) = exec_result.result {
+                                        self.operand_stack.push(OperandsStackValue {
+                                            value: returned_value,
+                                            origin: Some(func.identifier.clone()),
+                                        });
                                     }
                                 } else {
                                     return VMExecutionResult::terminate_with_errors(
@@ -904,6 +933,12 @@ impl Vm {
                             _ => {
                                 panic!("Invalid type for callee string")
                             }
+                        }
+
+                        // Release the function-name string retain from push_to_stack.
+                        // (For BoundAccess calls this is None — GetProperty already handled it.)
+                        if let Some(h) = caller_handle_to_release {
+                            let _ = self.memory.release(&h);
                         }
                     }
                     Opcode::Import => {
@@ -931,6 +966,8 @@ impl Vm {
                                 let module_struct_handle =
                                     self.memory.alloc(MemObject::StructLiteral(module_struct));
 
+                                // retain once so the frame pop can release it correctly
+                                let _ = self.memory.retain(&module_struct_handle);
                                 self.call_stack.put_to_frame(
                                     module_name.to_string(),
                                     Value::Handle(module_struct_handle),
@@ -944,9 +981,6 @@ impl Vm {
                                 let mod_bytecode = &self.bytecode
                                     [self.pc + 1..(self.pc + (mod_bytecode_length as usize)) + 1];
                                 self.pc += mod_bytecode_length as usize;
-                                // here we should generate a definition of the module
-                                // and push it onto the heap and add a Handle to the stack
-                                // --
                                 let exec_result = self
                                     .run_module(&mod_name.to_string(), mod_bytecode.to_vec(), debug)
                                     .await;
@@ -957,11 +991,16 @@ impl Vm {
                                 // if members exported, add them to the scope
                                 if let Some(result) = exec_result.result {
                                     if let Value::Handle(r) = result {
+                                        // retain once so the frame pop can release it correctly
+                                        let _ = self.memory.retain(&r);
                                         self.call_stack
                                             .put_to_frame(mod_name.to_string(), Value::Handle(r));
                                     }
                                 }
                             }
+                            // release the push retain for the module name string
+                            // (it was a temporary string on the operand stack)
+                            let _ = self.memory.release(&mod_handle);
                         } else {
                             // TODO: use self-vm errors system
                             panic!("invalid value type as module name for import")
@@ -993,17 +1032,15 @@ impl Vm {
                         self.pc += 1;
                     }
                     Opcode::Return => {
+                        // get_stack_values transfers ownership without releasing:
+                        // the push_to_stack retain travels with the value to the caller
                         let return_value = self.get_stack_values(&1)[0].clone();
-                        if let Value::Handle(h) = &return_value {
-                            let result = self.memory.retain(&h);
-                            if let Err(err) = result {
-                                return VMExecutionResult::terminate_with_errors(err, self);
-                            }
-                        }
                         return VMExecutionResult::terminate(Some(return_value));
                     }
                     Opcode::Add => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1022,6 +1059,8 @@ impl Vm {
                     }
                     Opcode::Substract => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1040,6 +1079,8 @@ impl Vm {
                     }
                     Opcode::Multiply => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1058,6 +1099,8 @@ impl Vm {
                     }
                     Opcode::Divide => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1076,6 +1119,8 @@ impl Vm {
                     }
                     Opcode::GreaterThan => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1094,6 +1139,8 @@ impl Vm {
                     }
                     Opcode::LessThan => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1112,6 +1159,8 @@ impl Vm {
                     }
                     Opcode::Equals => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1130,6 +1179,8 @@ impl Vm {
                     }
                     Opcode::NotEquals => {
                         // execution
+                        // Raw pop — handles are still alive during run_binary_expression;
+                        // run_binary_expression releases them after the op completes.
                         let right_operand = self.operand_stack.pop();
                         let left_operand = self.operand_stack.pop();
 
@@ -1147,7 +1198,7 @@ impl Vm {
                         self.pc += 1;
                     }
                     Opcode::UnaryNegation => {
-                        let operand = self.operand_stack.pop();
+                        let operand = self.pop_from_stack();
                         if operand.is_none() {
                             panic!("stack underflow");
                         };
@@ -1372,53 +1423,62 @@ impl Vm {
                 value = result_value;
             }
             (Value::Handle(l), Value::RawValue(r)) => {
-                // for the moment allow stack strings and memory strings
-                // binary operations
+                // allow Handle(String) op RawValue for +, ==, !=
                 let l_heap_object = self.memory.resolve(&l);
 
-                if l_heap_object.get_type() != "string" || r.get_type_string() != "UTF8" {
+                if l_heap_object.get_type() != "string" {
                     return Some(VMErrorType::TypeCoercionError(right));
                 }
 
+                let l_str = l_heap_object.to_string(self);
                 match operator {
+                    "+" => {
+                        // String + any numeric/utf8 raw value → string concatenation
+                        let result_string = format!("{}{}", l_str, r.to_string());
+                        value = Value::Handle(put_string(self, result_string));
+                    }
                     "==" => {
                         value = Value::RawValue(RawValue::Bool(Bool::new(
-                            l_heap_object.to_string(self) == r.to_string(),
-                        )))
-                    }
-                    _ => {
-                        // TODO: we should probably refactor this logic and make it happen
-                        // implementing a trait on each type rather than handling manually
-                        // all the possible combinations
-                        panic!("operator not implemented for coerced types")
-                    }
-                };
-            }
-            (Value::RawValue(l), Value::Handle(r)) => {
-                // for the moment allow stack strings and memory strings
-                // binary operations
-                let r_heap_object = self.memory.resolve(&r);
-
-                if r_heap_object.get_type() != "string" || l.get_type_string() != "UTF8" {
-                    return Some(VMErrorType::TypeCoercionError(right));
-                }
-
-                match operator {
-                    "==" => {
-                        value = Value::RawValue(RawValue::Bool(Bool::new(
-                            r_heap_object.to_string(self) == l.to_string(),
+                            l_str == r.to_string(),
                         )))
                     }
                     "!=" => {
                         value = Value::RawValue(RawValue::Bool(Bool::new(
-                            r_heap_object.to_string(self) != l.to_string(),
+                            l_str != r.to_string(),
                         )))
                     }
                     _ => {
-                        // TODO: we should probably refactor this logic and make it happen
-                        // implementing a trait on each type rather than handling manually
-                        // all the possible combinations
-                        panic!("operator not implemented for coerced types")
+                        return Some(VMErrorType::TypeCoercionError(right));
+                    }
+                };
+            }
+            (Value::RawValue(l), Value::Handle(r)) => {
+                // allow RawValue op Handle(String) for +, ==, !=
+                let r_heap_object = self.memory.resolve(&r);
+
+                if r_heap_object.get_type() != "string" {
+                    return Some(VMErrorType::TypeCoercionError(right));
+                }
+
+                let r_str = r_heap_object.to_string(self);
+                match operator {
+                    "+" => {
+                        // any numeric/utf8 raw value + String → string concatenation
+                        let result_string = format!("{}{}", l.to_string(), r_str);
+                        value = Value::Handle(put_string(self, result_string));
+                    }
+                    "==" => {
+                        value = Value::RawValue(RawValue::Bool(Bool::new(
+                            r_str == l.to_string(),
+                        )))
+                    }
+                    "!=" => {
+                        value = Value::RawValue(RawValue::Bool(Bool::new(
+                            r_str != l.to_string(),
+                        )))
+                    }
+                    _ => {
+                        return Some(VMErrorType::TypeCoercionError(right));
                     }
                 };
             }
@@ -1428,6 +1488,15 @@ impl Vm {
         }
 
         self.push_to_stack(value, None);
+
+        // Release operand handle retains now that the op has consumed them
+        if let Value::Handle(h) = &left.value {
+            let _ = self.memory.release(h);
+        }
+        if let Value::Handle(h) = &right.value {
+            let _ = self.memory.release(h);
+        }
+
         None
     }
 
@@ -1504,6 +1573,20 @@ impl Vm {
                     }
                 }
 
+                // release any handles still on the operand stack that were never consumed
+                // (e.g. return values of calls whose results weren't stored)
+                let leftover_stack = std::mem::take(&mut self.operand_stack);
+                for sv in leftover_stack {
+                    if let Value::Handle(h) = &sv.value {
+                        let _ = self.memory.release(h);
+                    }
+                }
+
+                // NOTE: args do NOT need an explicit release here.
+                // Each arg handle was pushed via push_to_stack (retain), then transferred
+                // via get_stack_values + put_to_frame into the frame. The frame pop above
+                // already released that exact retain — releasing again would be a double-free.
+
                 // recover vm state
                 self.pc = return_pc;
                 self.bytecode = main_bytecode;
@@ -1518,22 +1601,24 @@ impl Vm {
                         expected: func.parameters.len() as u32,
                         received: args.len() as u32,
                     });
-
                     return VMExecutionResult::terminate_with_errors(error, self);
                 }
-                let execution_result = native(self, caller, args, debug);
+                let execution_result = native(self, caller, args.clone(), debug);
+                // native functions receive a copy of args; release the push retains
+                for arg in &args {
+                    if let Value::Handle(h) = arg {
+                        let _ = self.memory.release(h);
+                    }
+                }
                 if let Ok(result) = execution_result {
-                    // we could return the result value, using
-                    // it as the return value of the function
-                    VMExecutionResult {
-                        error: None,
-                        result: Some(result),
+                    // native functions alloc their results with rc=0; retain once
+                    // so the CALL handler's direct push keeps a consistent rc=1
+                    if let Value::Handle(h) = &result {
+                        let _ = self.memory.retain(h);
                     }
+                    VMExecutionResult { error: None, result: Some(result) }
                 } else {
-                    VMExecutionResult {
-                        error: Some(execution_result.unwrap_err()),
-                        result: None,
-                    }
+                    VMExecutionResult { error: Some(execution_result.unwrap_err()), result: None }
                 }
             }
             Engine::NativeAsync(async_native) => {
@@ -1543,22 +1628,21 @@ impl Vm {
                         expected: func.parameters.len() as u32,
                         received: args.len() as u32,
                     });
-
                     return VMExecutionResult::terminate_with_errors(error, self);
                 }
-                let execution_result = async_native(self, caller, args, debug).await;
+                let execution_result = async_native(self, caller, args.clone(), debug).await;
+                for arg in &args {
+                    if let Value::Handle(h) = arg {
+                        let _ = self.memory.release(h);
+                    }
+                }
                 if let Ok(result) = execution_result {
-                    // we could return the result value, using
-                    // it as the return value of the function
-                    VMExecutionResult {
-                        error: None,
-                        result: Some(result),
+                    if let Value::Handle(h) = &result {
+                        let _ = self.memory.retain(h);
                     }
+                    VMExecutionResult { error: None, result: Some(result) }
                 } else {
-                    VMExecutionResult {
-                        error: Some(execution_result.unwrap_err()),
-                        result: None,
-                    }
+                    VMExecutionResult { error: Some(execution_result.unwrap_err()), result: None }
                 }
             }
         };
@@ -1895,8 +1979,33 @@ impl Vm {
     }
 
     pub fn push_to_stack(&mut self, value: Value, origin: Option<String>) {
-        self.operand_stack
-            .push(OperandsStackValue { value, origin });
+        // The operand stack is an owner: retain any handle being pushed
+        if let Value::Handle(h) = &value {
+            let _ = self.memory.retain(h);
+        }
+        self.operand_stack.push(OperandsStackValue { value, origin });
+    }
+
+    /// Pop a value that is being *consumed* (binary ops, conditions, print args).
+    /// Releases the handle retain that push_to_stack acquired.
+    fn pop_from_stack(&mut self) -> Option<OperandsStackValue> {
+        let sv = self.operand_stack.pop();
+        if let Some(ref v) = sv {
+            if let Value::Handle(h) = &v.value {
+                let _ = self.memory.release(h);
+            }
+        }
+        sv
+    }
+
+    /// Release any Handle values in a slice (used after native function calls
+    /// that receive their args via get_stack_values without an owning frame).
+    fn release_values(&mut self, values: &[Value]) {
+        for val in values {
+            if let Value::Handle(h) = val {
+                let _ = self.memory.release(h);
+            }
+        }
     }
 
     // events queue methods
@@ -1973,5 +2082,43 @@ impl Vm {
         // }
         //println!("\n--- BYTECODE INSTRUCTIONS ----------\n");
         //println!("{:#?}", Translator::new(self.bytecode.clone()).translate());
+    }
+
+    /// Release all remaining handles held by the call stack frames, operand
+    /// stack, and built-in handler table.  Call this after program execution
+    /// to get a clean baseline for --memcheck: zero live handles = no leaks.
+    pub fn cleanup(&mut self) {
+        // 1. Drain operand stack
+        let remaining_stack = std::mem::take(&mut self.operand_stack);
+        for sv in remaining_stack {
+            if let Value::Handle(h) = &sv.value {
+                let _ = self.memory.release(h);
+            }
+        }
+
+        // 2. Pop every call-stack frame (global frame included) and release handles
+        while let Some(frame) = self.call_stack.pop() {
+            for (_, value) in frame.symbols {
+                if let Value::Handle(h) = value {
+                    let _ = self.memory.release(&h);
+                }
+            }
+        }
+
+        // 3. Release built-in method handlers (.map, .len, .split, etc.)
+        //    These are allocated with rc=0 and live only in self.handlers.
+        let handlers = std::mem::take(&mut self.handlers);
+        for (_, h) in handlers {
+            let _ = self.memory.release(&h);
+        }
+
+        // 4. Force-free anything that remains: nested handles in Vectors,
+        //    StructLiteral fields, etc. — objects that were never individually
+        //    retained/released because their container was their sole owner.
+        self.memory.drain_all();
+    }
+
+    pub fn memory_stats(&self) -> crate::memory::MemoryStats {
+        self.memory.stats()
     }
 }
