@@ -113,9 +113,8 @@ impl Chat {
             let handle = vm.memory.alloc(obj);
             fields.insert(name, Value::Handle(handle));
         }
-        let ai_struct_handle = vm.memory.alloc(MemObject::StructLiteral(
-            self_vm::types::object::structs::StructLiteral::new(ai_module_name.clone(), fields),
-        ));
+        let ai_struct = self_vm::types::object::structs::StructLiteral::new(ai_module_name.clone(), fields, &mut vm);
+        let ai_struct_handle = vm.memory.alloc(MemObject::StructLiteral(ai_struct));
         vm.call_stack
             .put_to_frame(ai_module_name, Value::Handle(ai_struct_handle));
 

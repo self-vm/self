@@ -48,10 +48,10 @@ pub struct NetServer {
 }
 
 impl NetServer {
-    pub fn new(listener: TcpListener, shape: HashMap<String, Value>) -> NetServer {
+    pub fn new(listener: TcpListener, shape: HashMap<String, Value>, vm: &mut Vm) -> NetServer {
         NetServer {
             listener,
-            shape: StructLiteral::new("NetServer".to_string(), shape),
+            shape: StructLiteral::new("NetServer".to_string(), shape, vm),
         }
     }
 
@@ -68,11 +68,11 @@ pub struct NetStream {
 }
 
 impl NetStream {
-    pub fn new(host: String, stream: StreamKind, shape: HashMap<String, Value>) -> NetStream {
+    pub fn new(host: String, stream: StreamKind, shape: HashMap<String, Value>, vm: &mut Vm) -> NetStream {
         NetStream {
             host,
             stream,
-            shape: StructLiteral::new("NetStream".to_string(), shape),
+            shape: StructLiteral::new("NetStream".to_string(), shape, vm),
         }
     }
 
@@ -80,12 +80,12 @@ impl NetStream {
         host: String,
         stream: StreamKind,
         shape: HashMap<String, Value>,
-        vm: &Vm,
+        vm: &mut Vm,
     ) -> NetStream {
         NetStream {
             host,
             stream,
-            shape: StructLiteral::new("NetStream".to_string(), shape),
+            shape: StructLiteral::new("NetStream".to_string(), shape, vm),
         }
     }
 

@@ -25,7 +25,7 @@ pub fn init_constructor(vm: &mut Vm) -> MemObject {
 
     fields.insert("from_byte".to_string(), Value::Handle(from_byte_handle));
     fields.insert("from_bytes".to_string(), Value::Handle(from_bytes_handle));
-    MemObject::StructLiteral(StructLiteral::new("Buffer".to_string(), fields))
+    MemObject::StructLiteral(StructLiteral::new("Buffer".to_string(), fields, vm))
 }
 
 pub fn init_lib() -> Vec<(String, MemObject)> {

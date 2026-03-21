@@ -83,7 +83,7 @@ pub fn connect(
     shape.insert("write".to_string(), Value::Handle(write_ref));
     shape.insert("read".to_string(), Value::Handle(read_ref));
 
-    let net_stream = NetStream::new(owned_host, stream, shape);
+    let net_stream = NetStream::new(owned_host, stream, shape, vm);
     let net_stream_ref = vm
         .memory
         .alloc(MemObject::NativeStruct(NativeStruct::NetStream(net_stream)));
@@ -186,7 +186,7 @@ pub fn listen(
     )));
     shape.insert("accept".to_string(), Value::Handle(accept_ref));
 
-    let net_server = NetServer::new(server, shape);
+    let net_server = NetServer::new(server, shape, vm);
     return Ok(Value::Handle(vm.memory.alloc(MemObject::NativeStruct(
         NativeStruct::NetServer(net_server),
     ))));
@@ -233,7 +233,7 @@ fn accept(
     shape.insert("host".to_string(), Value::Handle(host_ref));
     shape.insert("write".to_string(), Value::Handle(write_ref));
     shape.insert("read".to_string(), Value::Handle(read_ref));
-    let net_stream = NetStream::new(host, StreamKind::Plain(stream), shape);
+    let net_stream = NetStream::new(host, StreamKind::Plain(stream), shape, vm);
     let net_stream_ref = vm
         .memory
         .alloc(MemObject::NativeStruct(NativeStruct::NetStream(net_stream)));

@@ -40,7 +40,7 @@ impl NativeLib {
         NativeLib {
             path,
             library,
-            shape: StructLiteral::new("NativeLib".to_string(), fields),
+            shape: StructLiteral::new("NativeLib".to_string(), fields, vm),
         }
     }
 

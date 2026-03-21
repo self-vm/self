@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{
     core::error::{self, fatal_errors::FatalError},
     types::Value,
+    vm::Vm,
 };
 use self_bytecode::DataType;
 
@@ -25,18 +26,25 @@ impl StructDeclaration {
 pub struct StructLiteral {
     pub struct_type: String,
     pub fields: HashMap<String, Value>,
+    pub members: HashMap<String, Value>,
 }
 
 impl StructLiteral {
-    pub fn new(struct_type: String, fields: HashMap<String, Value>) -> StructLiteral {
+    pub fn new(struct_type: String, fields: HashMap<String, Value>, vm: &mut Vm) -> StructLiteral {
+        let members = crate::std::selfstruct::add_handlers(vm);
+
         StructLiteral {
             struct_type,
             fields,
+            members,
         }
     }
 
     pub fn property_access(&self, property: &str) -> Option<Value> {
-        self.fields.get(property).cloned()
+        if let Some(val) = self.fields.get(property) {
+            return Some(val.clone());
+        }
+        self.members.get(property).cloned()
     }
 
     pub fn unsafe_property_access(&self, property: &str) -> Value {
@@ -54,7 +62,12 @@ impl StructLiteral {
         self.fields.insert(property.to_string(), value);
     }
 
-    pub fn to_string(&self) -> String {
-        format!("[instance] {}", self.struct_type)
+    pub fn to_string(&self, vm: &Vm) -> String {
+        let fields: Vec<String> = self
+            .fields
+            .iter()
+            .map(|(k, v)| format!("{}: {}", k, v.to_string(vm)))
+            .collect();
+        format!("{}{{ {} }}", self.struct_type, fields.join(", "))
     }
 }

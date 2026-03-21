@@ -17,6 +17,7 @@ pub mod path;
 pub mod schedule;
 pub mod selfmod;
 pub mod selfstring;
+pub mod selfstruct;
 mod utils;
 pub mod vector;
 pub mod web;

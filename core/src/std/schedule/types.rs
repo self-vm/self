@@ -24,7 +24,7 @@ impl Interval {
         fields.insert("start".to_string(), Value::Handle(start_handle));
 
         Interval {
-            shape: StructLiteral::new("Interval".to_string(), fields),
+            shape: StructLiteral::new("Interval".to_string(), fields, vm),
         }
     }
 

@@ -206,7 +206,7 @@ impl MemObject {
             MemObject::String(x) => x.to_string(),
             MemObject::Function(x) => x.to_string(),
             MemObject::StructDeclaration(x) => x.to_string(),
-            MemObject::StructLiteral(x) => x.to_string(),
+            MemObject::StructLiteral(x) => x.to_string(vm),
             MemObject::NativeStruct(x) => x.serialize(vm),
             MemObject::Vector(x) => x.to_string(vm),
         }
@@ -217,7 +217,7 @@ impl MemObject {
             MemObject::String(x) => x.to_string(),
             MemObject::Function(x) => x.to_string(),
             MemObject::StructDeclaration(x) => x.to_string(),
-            MemObject::StructLiteral(x) => x.to_string(),
+            MemObject::StructLiteral(x) => x.to_string(vm),
             MemObject::NativeStruct(x) => x.to_string(vm),
             MemObject::Vector(x) => x.to_string(vm),
         }

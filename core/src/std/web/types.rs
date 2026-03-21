@@ -106,7 +106,7 @@ impl Browser {
         Browser {
             tx,
             sessionable: true,
-            shape: StructLiteral::new("Browser".to_string(), fields),
+            shape: StructLiteral::new("Browser".to_string(), fields, vm),
         }
     }
 

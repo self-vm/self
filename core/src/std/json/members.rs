@@ -206,7 +206,7 @@ fn json_to_value(vm: &mut Vm, json: &JsonValue) -> Result<Value, VMError> {
                 let value = json_to_value(vm, val)?;
                 fields.insert(key.clone(), value);
             }
-            let struct_literal = StructLiteral::new("json_object".to_string(), fields);
+            let struct_literal = StructLiteral::new("json_object".to_string(), fields, vm);
             let handle = vm.memory.alloc(MemObject::StructLiteral(struct_literal));
             Ok(Value::Handle(handle))
         }

@@ -31,7 +31,7 @@ impl HttpResponse {
         fields.insert("body".to_string(), Value::Handle(buf_handle));
 
         HttpResponse {
-            shape: StructLiteral::new("HttpResponse".to_string(), fields),
+            shape: StructLiteral::new("HttpResponse".to_string(), fields, vm),
         }
     }
 

@@ -26,7 +26,7 @@ pub struct Buffer {
 impl Buffer {
     pub fn new_initialized(bytes: Vec<u8>, vm: &mut Vm) -> Buffer {
         let fields = buffer::add_handlers(vm);
-        let shape = StructLiteral::new("Buffer".to_string(), fields);
+        let shape = StructLiteral::new("Buffer".to_string(), fields, vm);
 
         Buffer { bytes, shape }
     }

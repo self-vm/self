@@ -927,7 +927,7 @@ impl Vm {
                                 }
 
                                 // create the native module struct
-                                let module_struct = StructLiteral::new(module_def.0, module_fields);
+                                let module_struct = StructLiteral::new(module_def.0, module_fields, self);
                                 let module_struct_handle =
                                     self.memory.alloc(MemObject::StructLiteral(module_struct));
 
@@ -1449,7 +1449,7 @@ impl Vm {
         let mod_frame = self.call_stack.pop(); // here we should lookup the exports and store on a struct, then, return that struct on the VMExecutionResult
         if let Some(mut frame) = mod_frame {
             let exported_members = frame.get_exports();
-            let exports_struct = StructLiteral::new(mod_name.to_string(), exported_members);
+            let exports_struct = StructLiteral::new(mod_name.to_string(), exported_members, self);
             let exports_handle = self.memory.alloc(MemObject::StructLiteral(exports_struct));
 
             mod_exec_result.result = Some(Value::Handle(exports_handle));
@@ -1746,7 +1746,7 @@ impl Vm {
                 // here we should check if the struct exists and the each field
                 // before allocating it in the heap
                 let struct_literal =
-                    StructLiteral::new(resolved_struct_type.to_string(self), fields);
+                    StructLiteral::new(resolved_struct_type.to_string(self), fields, self);
                 let value_handle = self.memory.alloc(MemObject::StructLiteral(struct_literal));
                 Value::Handle(value_handle)
             }

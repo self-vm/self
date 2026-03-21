@@ -118,7 +118,7 @@ pub fn post(
         let headers_struct = if let Some(h) = options.property_access("headers") {
             h.as_struct_obj(vm)?
         } else {
-            StructLiteral::new("Headers".to_string(), HashMap::new())
+            StructLiteral::new("Headers".to_string(), HashMap::new(), vm)
         };
         let body = if let Some(b) = options.property_access("body") {
             b.as_string_obj(vm)?

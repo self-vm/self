@@ -48,7 +48,7 @@ impl McpClient {
         McpClient {
             url,
             client: Arc::new(Mutex::new(Some(client))),
-            shape: StructLiteral::new("McpClient".to_string(), fields),
+            shape: StructLiteral::new("McpClient".to_string(), fields, vm),
         }
     }
 
@@ -79,7 +79,7 @@ impl McpTool {
 
         McpTool {
             name: name,
-            shape: StructLiteral::new("McpTool".to_string(), fields),
+            shape: StructLiteral::new("McpTool".to_string(), fields, vm),
         }
     }
 

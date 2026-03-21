@@ -108,7 +108,7 @@ impl Link {
         );
 
         Link {
-            shape: StructLiteral::new("Link".to_string(), fields),
+            shape: StructLiteral::new("Link".to_string(), fields, vm),
         }
     }
 
@@ -198,7 +198,7 @@ impl Chain {
 
         Chain {
             ctx: ctx,
-            shape: StructLiteral::new("Chain".to_string(), fields),
+            shape: StructLiteral::new("Chain".to_string(), fields, vm),
         }
     }
 
