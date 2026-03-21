@@ -1,0 +1,11 @@
+import ai
+import env
+import io
+
+env.read(".env")
+
+
+let chain = ai.chain("list files", "cannot list files or files listed")
+chain.unfold(ai.default_unfold)
+
+println("done")
