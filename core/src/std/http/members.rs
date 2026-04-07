@@ -3,11 +3,7 @@ use std::collections::HashMap;
 use crate::{
     core::error::{self, net_errors::NetErrors, type_errors::TypeError, VMError, VMErrorType},
     memory::{Handle, MemObject},
-    std::{
-        buffer::types::Buffer,
-        http::types::HttpResponse,
-        NativeMember,
-    },
+    std::{buffer::types::Buffer, http::types::HttpResponse, NativeMember},
     types::{
         object::{
             func::{Engine, Function},
@@ -70,12 +66,17 @@ pub fn get(
         }
 
         let client = Client::new();
-        let raw_response = client.get(url).send().await.map_err(|e| {
-            error::throw(
-                VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
-                vm,
-            )
-        })?;
+        let raw_response = client
+            .get(url)
+            .header(USER_AGENT, "self/0.1")
+            .send()
+            .await
+            .map_err(|e| {
+                error::throw(
+                    VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
+                    vm,
+                )
+            })?;
         let status_code = raw_response.status().as_u16();
         let raw_body = raw_response.bytes().await.map_err(|e| {
             error::throw(

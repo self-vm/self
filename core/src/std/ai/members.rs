@@ -914,10 +914,12 @@ pub fn exec(
                                     .get(consumer_param_counter)
                                     .cloned()
                                     .unwrap_or_else(|| {
-                                        eprintln!(
-                                            "action runtime defined param cannot be populated (index: {})",
-                                            index
-                                        );
+                                        if debug {
+                                            eprintln!(
+                                                "action runtime defined param cannot be populated (index: {})",
+                                                index
+                                            );
+                                        }
                                         Value::RawValue(RawValue::Nothing)
                                     });
                                 consumer_param_counter += 1;
