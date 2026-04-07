@@ -1685,6 +1685,7 @@ dependencies = [
  "crossterm",
  "dotenvy",
  "ego-compiler",
+ "futures",
  "lazy_static",
  "ratatui",
  "regex",
