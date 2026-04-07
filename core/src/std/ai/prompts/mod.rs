@@ -1,7 +1,7 @@
 pub fn infer_prompt(request: &String, context: &String, expected_type: &Option<String>) -> String {
     return format!(
         "
-Analyze the query and respond with a single value in the following json format:
+Your a general inferring machine with a natural language input type. Your purpose is to infer values given some queries, with no deterministic implementation. Analyze the query and respond with a single value in the following json format inferring the value based on the query:
 
 {{
   \"value\": response-value
@@ -9,16 +9,14 @@ Analyze the query and respond with a single value in the following json format:
 
 You are provided two elements:
 
-query: a string that describes a inferring condition:
+query: a string that describes a inferring condition. Examples of queries:
    '<arg> is greater than 10'
+   '<arg> in base64'
    'extract the urls of <arg>'
    'get all the links related to linux in <arg>'
 
-response_enforced_type: the type that must be enforced for the inference. <any> gives free choice based on context.
-
 context: a dictionary of variables and their current values, for example:
    {{ 'arg': 11 }}
-
 Context variables appears in the query enclosed in < >, and you must evaluate them correctly.
 
 Response rules: 
@@ -29,6 +27,9 @@ Response rules:
 * If response_enforce_type arg provided, enforce the type that it says without conversion.
 * Never respond with any additional text. Only the final value.
 * If you dont know, respond with \"nothing\".
+
+You have also the following flags: 
+- response_enforced_type: the type that must be enforced for the inference. 'any' value gives free choice based on context.
 
 Infer the following input: 
 

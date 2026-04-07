@@ -1,15 +1,18 @@
 use std::{env, vec};
 
-use reqwest::{Client, Response};
+use reqwest::Client;
 
-use crate::std::ai::providers::{ChatRequest, Message};
+use crate::{
+    core::error::{ai_errors::AIError, VMErrorType},
+    std::ai::providers::{AIResponse, ChatRequest, ChatResponse, Message},
+};
 
-pub async fn fetch(prompt: String) -> Response {
+pub async fn fetch(prompt: String) -> Result<AIResponse, VMErrorType> {
     let api_key = env::var("MISTRAL_API_KEY").expect("MISTRAL_API_KEY not set");
 
     let client = Client::new();
     let request_body = ChatRequest {
-        model: "mistral-medium".to_string(), // O "mistral-small", "mistral-large", etc.
+        model: "mistral-medium".to_string(),
         messages: vec![Message {
             role: "system".to_string(),
             content: prompt,
@@ -24,5 +27,14 @@ pub async fn fetch(prompt: String) -> Response {
         .await
         .expect("AI: Failed to send request");
 
-    res
+    if !res.status().is_success() {
+        return Err(VMErrorType::AI(AIError::AIFetchError(
+            res.status().to_string(),
+        )));
+    }
+
+    let response: ChatResponse = res.json().await.expect("AI: Failed to parse response");
+    Ok(AIResponse {
+        content: response.choices[0].message.content.clone(),
+    })
 }

@@ -1,10 +1,10 @@
 use std::env;
 
-use reqwest::Response;
 use serde::{Deserialize, Serialize};
 
 use crate::core::error::{ai_errors::AIError, VMErrorType};
 
+mod driver;
 mod mistral;
 mod openai;
 
@@ -35,7 +35,11 @@ pub struct MessageContent {
     pub content: String,
 }
 
-pub async fn fetch_ai(prompt: String) -> Result<Response, VMErrorType> {
+pub struct AIResponse {
+    pub content: String,
+}
+
+pub async fn fetch_ai(prompt: String) -> Result<AIResponse, VMErrorType> {
     let ai_engine = env::var("SELF_AI_ENGINE");
     let ai_engine = if let Ok(engine) = ai_engine {
         engine
@@ -44,8 +48,9 @@ pub async fn fetch_ai(prompt: String) -> Result<Response, VMErrorType> {
     };
 
     match ai_engine.as_str() {
-        "openai" => Ok(openai::fetch(prompt).await),
-        "mistral" => Ok(mistral::fetch(prompt).await),
+        "openai" => openai::fetch(prompt).await,
+        "mistral" => mistral::fetch(prompt).await,
+        "driver" => driver::fetch(prompt).await,
         _ => Err(VMErrorType::AI(AIError::AIEngineNotImplemented(ai_engine))),
     }
 }

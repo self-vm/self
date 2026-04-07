@@ -1,10 +1,13 @@
 use std::{env, vec};
 
-use reqwest::{Client, Response};
+use reqwest::Client;
 
-use crate::std::ai::providers::{ChatRequest, Message};
+use crate::{
+    core::error::{ai_errors::AIError, VMErrorType},
+    std::ai::providers::{AIResponse, ChatRequest, ChatResponse, Message},
+};
 
-pub async fn fetch(prompt: String) -> Response {
+pub async fn fetch(prompt: String) -> Result<AIResponse, VMErrorType> {
     let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not set");
 
     let client = Client::new();
@@ -22,7 +25,16 @@ pub async fn fetch(prompt: String) -> Response {
         .json(&request_body)
         .send()
         .await
-        .expect("AI: Failed to send request"); // handle no network timeout here
+        .expect("AI: Failed to send request");
 
-    res
+    if !res.status().is_success() {
+        return Err(VMErrorType::AI(AIError::AIFetchError(
+            res.status().to_string(),
+        )));
+    }
+
+    let response: ChatResponse = res.json().await.expect("AI: Failed to parse response");
+    Ok(AIResponse {
+        content: response.choices[0].message.content.clone(),
+    })
 }

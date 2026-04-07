@@ -1,5 +1,5 @@
-use std::vec;
 use std::collections::HashMap;
+use std::vec;
 
 use ego_compiler::unsafe_compile_block_from_str;
 use futures::future::BoxFuture;
@@ -17,12 +17,13 @@ use crate::{
     std::{
         ai::{
             prompts::{act_chain_prompt, do_prompt, infer_prompt, resolve_prompt},
-            providers::{fetch_ai, ChatResponse},
+            providers::fetch_ai,
             types::{AIAction, Action, Chain, ChainLinkJson, Link, UnfoldStore},
         },
         gen_native_modules_defs, generate_native_module, get_native_module_type,
         heap_utils::put_string,
-        utils::cast_json_value, NativeMember,
+        utils::cast_json_value,
+        NativeMember,
     },
     types::{
         object::{
@@ -183,18 +184,21 @@ pub fn infer(
     Box::pin(async move {
         let request_ref = params[0].clone();
         let request = request_ref.as_string_obj(vm)?;
-        let options_ref = params[1].clone();
-        let options = options_ref.as_struct_obj(vm)?;
-        let context = options
-            .property_access("context")
-            .unwrap_or(Value::RawValue(RawValue::Nothing))
-            .as_string_obj(vm)?;
-        let enforced_type = options.property_access("enforced_type");
-        let enforced_type = if let Some(v) = enforced_type {
-            let v = v.as_string_obj(vm)?;
-            Some(v)
+
+        let (context, enforced_type) = if let Some(options_ref) = params.get(1) {
+            let options = options_ref.clone().as_struct_obj(vm)?;
+            let context = options
+                .property_access("context")
+                .unwrap_or(Value::RawValue(RawValue::Nothing))
+                .as_string_obj(vm)?;
+            let enforced_type = if let Some(v) = options.property_access("enforced_type") {
+                Some(v.as_string_obj(vm)?)
+            } else {
+                None
+            };
+            (context, enforced_type)
         } else {
-            None
+            (String::new(), None)
         };
 
         if debug {
@@ -212,15 +216,7 @@ pub fn infer(
             }
         };
 
-        if !res.status().is_success() {
-            return Err(error::throw(
-                VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
-                vm,
-            ));
-        }
-
-        let response: ChatResponse = res.json().await.expect("AI: Failed to parse response");
-        let answer = &response.choices[0].message.content;
+        let answer = &res.content.clone();
 
         if debug {
             println!("AI -> {}", answer);
@@ -278,15 +274,7 @@ pub fn resolve(
             }
         };
 
-        if !res.status().is_success() {
-            return Err(error::throw(
-                VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
-                vm,
-            ));
-        }
-
-        let response: ChatResponse = res.json().await.expect("AI: Failed to parse response");
-        let answer = &response.choices[0].message.content;
+        let answer = &res.content.clone();
 
         if debug {
             println!("AI -> {}", answer);
@@ -328,20 +316,12 @@ pub fn do_fn(
         let res = match res {
             Ok(r) => r,
             Err(vm_err) => {
+                println!("AI.DO (FAILED) -> {:?}", vm_err);
                 return Err(error::throw(vm_err, vm));
             }
         };
 
-        if !res.status().is_success() {
-            println!("AI.DO (FAILED) -> {}", res.status());
-            return Err(error::throw(
-                VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
-                vm,
-            ));
-        }
-
-        let response: ChatResponse = res.json().await.expect("AI.DO: Failed to parse response");
-        let answer = &response.choices[0].message.content;
+        let answer = &res.content.clone();
 
         if debug {
             println!("AI -> {}", answer);
@@ -490,23 +470,12 @@ pub async fn generate_link(
     let res = match res {
         Ok(r) => r,
         Err(vm_err) => {
+            println!("AI.CHAIN (FAILED) -> {:?}", vm_err);
             return Err(error::throw(vm_err, vm));
         }
     };
 
-    if !res.status().is_success() {
-        println!("AI.CHAIN (FAILED) -> {}", res.status());
-        return Err(error::throw(
-            VMErrorType::AI(AIError::AIFetchError(res.status().to_string())),
-            vm,
-        ));
-    }
-
-    let response: ChatResponse = res
-        .json()
-        .await
-        .expect("AI.CHAIN: Failed to parse response");
-    let answer = &response.choices[0].message.content;
+    let answer = &res.content.clone();
 
     if debug {
         println!("AI.CHAIN -> {}", answer);
