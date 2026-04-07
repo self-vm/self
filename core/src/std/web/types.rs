@@ -58,9 +58,17 @@ impl Browser {
             let local = tokio::task::LocalSet::new();
 
             local.block_on(&rt, async move {
+                let unique_dir = std::env::temp_dir().join(format!(
+                    "chromiumoxide-{}",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_nanos()
+                ));
                 let (browser, mut handler) = ChromiumBrowser::launch(
                     BrowserConfig::builder()
                         .with_head()
+                        .user_data_dir(&unique_dir)
                         .build()
                         .expect("browser config"),
                 )
