@@ -46,6 +46,9 @@ fn get_response_json(response: &String) -> String {
         .trim_end_matches("```")
         .trim();
 
+    let cleaned = cleaned
+        .replace("\n", "") // scape new lines, LLMs sometimes introduce unscapped ones
+        .replace("\r", "");
     cleaned.to_string()
 }
 
@@ -573,6 +576,16 @@ pub fn unfold(
             ));
         }
 
+        let sanitization = if let Some(config_ref) = params.get(1) {
+            let options = config_ref.clone().as_struct_obj(vm)?;
+            options
+                .property_access("sanitization")
+                .unwrap_or(Value::RawValue(RawValue::Bool(Bool::new(false))))
+                .as_bool(vm)?
+        } else {
+            true
+        };
+
         // get chain links
         let mut links: Vec<Link> = _self
             .shape
@@ -753,7 +766,7 @@ pub fn unfold(
             // a hashmap that has steps, and its conclusions
             // a.k.a variables of the chain
             memory.insert_entry(current_def, conclusion);
-            let context = memory.context_to_string_vec(vm);
+            let context = memory.context_to_string_vec(vm, sanitization);
 
             // generate the next link
             let mut next_link = generate_link(

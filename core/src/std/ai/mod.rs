@@ -2,12 +2,11 @@ pub mod members;
 mod prompts;
 mod providers;
 pub mod types;
+pub mod utils;
 
 use crate::{
     memory::MemObject,
-    std::ai::members::{
-            chain_obj, default_unfold_obj, do_fn, infer, resolve_obj,
-        },
+    std::ai::members::{chain_obj, default_unfold_obj, do_fn, infer, resolve_obj},
     types::object::{
         func::{Engine, Function},
         structs::StructDeclaration,

@@ -9,7 +9,11 @@ self-vm = { path = "../core" }
 ego-compiler = { path = "../compiler" }
 regex = "1"
 lazy_static = "1.4"
-tokio = { version = "1.47.1", features = ["rt-multi-thread"] }
+tokio = { version = "1.47.1", features = [
+  "rt-multi-thread",
+  "io-std",
+  "io-util",
+] }
 colored = "3.1.1"
 dotenvy = "0.15.7"
 crossterm = "0.27"

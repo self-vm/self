@@ -23,11 +23,11 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn llm_serialize(&self, vm: &Vm) -> String {
+    pub fn llm_serialize(&self, vm: &Vm, sanitization: bool) -> String {
         match self {
-            Value::RawValue(x) => x.to_string(),
+            Value::RawValue(x) => x.serialize(),
             Value::BoundAccess(x) => x.property.to_string(vm),
-            Value::Handle(x) => vm.memory.resolve(x).llm_serialize(vm),
+            Value::Handle(x) => vm.memory.resolve(x).llm_serialize(vm, sanitization),
             _ => "unkown_value_type".to_string(),
         }
     }
@@ -467,6 +467,13 @@ impl Value {
     }
 
     // unsafe methods
+    pub fn unsafe_as_handle(&self, vm: &Vm) -> Handle {
+        match self {
+            Value::Handle(r) => r.clone(),
+            _ => error::fatal(FatalError::InvalidValueUnwrap(self.get_resolved_type(vm))),
+        }
+    }
+
     pub fn unsafe_as_native_struct<'a>(&self, vm: &'a Vm) -> &'a NativeStruct {
         match self {
             Value::Handle(r) => {

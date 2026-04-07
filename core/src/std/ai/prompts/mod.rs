@@ -126,7 +126,7 @@ dynamic params value: \"{{<variable_name>}}\" (with no more data on the string)
 
 You must only use the modules and members listed above. Do not invent anything.
 
-Respond only with JSON. Do not include any explanations or markdown.
+Respond only with ONE JSON. Do not include any explanations or markdown, only ONE JSON.
 
 if the chain end condition is met, answer a json with this structure: {{ 
     \"end_condition\": \"\" // the end condition you used, 

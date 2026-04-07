@@ -79,7 +79,9 @@ impl NativeStruct {
         }
     }
 
-    pub fn serialize(&self, vm: &Vm) -> String {
+    // this serialization is used when providing this entities
+    // to an LLM
+    pub fn serialize(&self, vm: &Vm, sanitization: bool) -> String {
         match self {
             NativeStruct::NetStream(x) => x.to_string(),
             NativeStruct::NetServer(x) => x.to_string(),
@@ -94,7 +96,7 @@ impl NativeStruct {
             NativeStruct::Interval(x) => x.to_string(vm),
             NativeStruct::Browser(x) => x.to_string(vm),
             NativeStruct::Buffer(x) => x.to_string(vm),
-            NativeStruct::HttpResponse(x) => x.serialize(vm),
+            NativeStruct::HttpResponse(x) => x.serialize(vm, sanitization),
         }
     }
 

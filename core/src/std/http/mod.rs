@@ -14,6 +14,7 @@ use crate::{
 
 mod members;
 pub mod types;
+pub mod utils;
 
 pub fn generate_struct() -> (String, Vec<(String, MemObject)>) {
     let mut fields = vec![];

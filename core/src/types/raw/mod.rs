@@ -17,6 +17,7 @@ use utf8::Utf8;
 
 use crate::{
     core::error::{self, VMError, VMErrorType},
+    std::ai::utils::{is_sanitizable, sanitize},
     types::raw::byte::Byte,
     vm::Vm,
 };
@@ -72,6 +73,26 @@ impl RawValue {
             RawValue::U64(x) => x.value.to_string(),
             RawValue::F64(x) => x.value.to_string(),
             RawValue::Utf8(x) => x.value.to_string(),
+            RawValue::Bool(x) => x.value.to_string(),
+            RawValue::Byte(x) => x.value.to_string(),
+            RawValue::Nothing => "nothing".to_string(),
+        }
+    }
+
+    pub fn serialize(&self) -> String {
+        match self {
+            RawValue::I32(x) => x.value.to_string(),
+            RawValue::I64(x) => x.value.to_string(),
+            RawValue::U32(x) => x.value.to_string(),
+            RawValue::U64(x) => x.value.to_string(),
+            RawValue::F64(x) => x.value.to_string(),
+            RawValue::Utf8(x) => {
+                if let Some(content_type) = is_sanitizable(&x.value) {
+                    sanitize(x.value.as_bytes().to_vec(), content_type)
+                } else {
+                    x.value.to_string()
+                }
+            }
             RawValue::Bool(x) => x.value.to_string(),
             RawValue::Byte(x) => x.value.to_string(),
             RawValue::Nothing => "nothing".to_string(),

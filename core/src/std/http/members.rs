@@ -78,6 +78,16 @@ pub fn get(
                 )
             })?;
         let status_code = raw_response.status().as_u16();
+        let resp_headers: HashMap<String, String> = raw_response
+            .headers()
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.to_string(),
+                    v.to_str().unwrap_or("").to_string(),
+                )
+            })
+            .collect();
         let raw_body = raw_response.bytes().await.map_err(|e| {
             error::throw(
                 VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
@@ -85,9 +95,9 @@ pub fn get(
             )
         })?;
 
-        let body_bytes = raw_body.iter().map(|v| v.clone()).collect::<Vec<u8>>();
+        let body_bytes = raw_body.iter().cloned().collect::<Vec<u8>>();
         let body_buffer = Buffer::new_initialized(body_bytes, vm);
-        let response = HttpResponse::new_initialized(status_code, body_buffer, vm);
+        let response = HttpResponse::new_initialized(status_code, resp_headers, body_buffer, vm);
         let response_handle = vm
             .memory
             .alloc(MemObject::NativeStruct(NativeStruct::HttpResponse(
@@ -153,6 +163,11 @@ pub fn post(
             )
         })?;
         let status_code = raw_response.status().as_u16();
+        let resp_headers: HashMap<String, String> = raw_response
+            .headers()
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+            .collect();
         let raw_body = raw_response.bytes().await.map_err(|e| {
             error::throw(
                 VMErrorType::Net(NetErrors::ReadError(format!("cannot get {}", url))),
@@ -160,9 +175,9 @@ pub fn post(
             )
         })?;
 
-        let body_bytes = raw_body.iter().map(|v| v.clone()).collect::<Vec<u8>>();
+        let body_bytes = raw_body.iter().cloned().collect::<Vec<u8>>();
         let body_buffer = Buffer::new_initialized(body_bytes, vm);
-        let response = HttpResponse::new_initialized(status_code, body_buffer, vm);
+        let response = HttpResponse::new_initialized(status_code, resp_headers, body_buffer, vm);
         let response_handle = vm
             .memory
             .alloc(MemObject::NativeStruct(NativeStruct::HttpResponse(

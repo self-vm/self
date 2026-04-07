@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{
     core::error::{self, memory_errors::MemoryError, VMError, VMErrorType},
     heap::{Heap, HeapRef},
+    std::ai::utils::{is_sanitizable, sanitize},
     types::object::{
         func::Function,
         native_struct::NativeStruct,
@@ -152,11 +153,7 @@ impl MemoryManager {
     /// elements, StructLiteral fields) that have rc=0 but were never
     /// explicitly released because the container was their only owner.
     pub fn drain_all(&mut self) {
-        let remaining: Vec<Handle> = self
-            .table
-            .keys()
-            .map(|&p| Handle::new(p))
-            .collect();
+        let remaining: Vec<Handle> = self.table.keys().map(|&p| Handle::new(p)).collect();
         for h in remaining {
             // free_handle may panic if the handle is already gone;
             // use remove directly to be safe.
@@ -289,13 +286,19 @@ pub enum MemObject {
 }
 
 impl MemObject {
-    pub fn llm_serialize(&self, vm: &Vm) -> String {
+    pub fn llm_serialize(&self, vm: &Vm, sanitization: bool) -> String {
         match self {
-            MemObject::String(x) => x.to_string(),
+            MemObject::String(x) => {
+                if let Some(content_type) = is_sanitizable(&x.value) {
+                    sanitize(x.value.as_bytes().to_vec(), content_type)
+                } else {
+                    x.to_string()
+                }
+            }
             MemObject::Function(x) => x.to_string(),
             MemObject::StructDeclaration(x) => x.to_string(),
             MemObject::StructLiteral(x) => x.to_string(vm),
-            MemObject::NativeStruct(x) => x.serialize(vm),
+            MemObject::NativeStruct(x) => x.serialize(vm, sanitization),
             MemObject::Vector(x) => x.to_string(vm),
         }
     }

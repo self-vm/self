@@ -263,13 +263,13 @@ impl UnfoldStore {
         self.context.insert(identifier, entry);
     }
 
-    pub fn context_to_string_vec(&mut self, vm: &Vm) -> Vec<String> {
+    pub fn context_to_string_vec(&mut self, vm: &Vm, sanitization: bool) -> Vec<String> {
         let mut strings = vec![];
         for (key, entry) in &self.context {
             strings.push(format!(
                 "variable_name: {key}\nthought: {} executed with result in value.\nvalue: {}",
                 entry.origin_thought,
-                entry.value.llm_serialize(vm)
+                entry.value.llm_serialize(vm, sanitization)
             ));
         }
 
