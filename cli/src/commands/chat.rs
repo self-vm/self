@@ -1,12 +1,112 @@
+use futures::future::BoxFuture;
+use self_vm::core::error::VMError;
 use self_vm::memory::{Handle, MemObject};
+use self_vm::std::ai::members::{chain as ai_chain, unfold as ai_unfold};
 use self_vm::std::generate_native_module;
 use self_vm::std::NativeModule;
+use self_vm::types::object::func::{Engine, Function};
 use self_vm::types::object::native_struct::NativeStruct;
+use self_vm::types::object::structs::StructLiteral;
 use self_vm::types::Value;
 use self_vm::vm::Vm;
+use std::collections::HashMap;
 use std::io::{self, stdout};
+use std::sync::{
+    Mutex,
+    atomic::{AtomicU32, Ordering},
+};
 use std::time::Duration;
 use tokio::sync::mpsc;
+
+static TUI_TX: Mutex<Option<mpsc::Sender<ChatMessage>>> = Mutex::new(None);
+static TUI_STEP: AtomicU32 = AtomicU32::new(1);
+
+fn tui_unfold(
+    vm: &mut Vm,
+    _self: Option<Handle>,
+    params: Vec<Value>,
+    debug: bool,
+) -> BoxFuture<'_, Result<Value, VMError>> {
+    Box::pin(async move {
+        // Clone sender before any await point so we don't hold the lock across awaits
+        let tx = TUI_TX.lock().unwrap().clone();
+        let step = TUI_STEP.fetch_add(1, Ordering::Relaxed);
+
+        let link = params[0].as_native_struct(vm)?.as_link(vm)?;
+
+        let def = link
+            .shape
+            .property_access("def")
+            .and_then(|v| v.as_string_obj(vm).ok())
+            .unwrap_or_else(|| "...".to_string());
+
+        if let Some(ref tx) = tx {
+            let _ = tx.send(ChatMessage::Step(step, def)).await;
+        }
+
+        let resolved = if let Some(a_val) = link.shape.property_access("action") {
+            if let Ok(action) = a_val.as_native_struct(vm).and_then(|ns| ns.as_action(vm)) {
+                if let Some(ref tx) = tx {
+                    let _ = tx
+                        .send(ChatMessage::Action(
+                            action.module.clone(),
+                            action.member.clone(),
+                        ))
+                        .await;
+                }
+                let exec_fn_handle = action.exec.clone();
+                if let MemObject::Function(exec_fn) = vm.memory.resolve(&exec_fn_handle) {
+                    let exec_fn = exec_fn.clone();
+                    let action_handle = vm
+                        .memory
+                        .alloc(MemObject::NativeStruct(NativeStruct::Action(action)));
+                    let exec_result = vm
+                        .run_function(&exec_fn, Some(action_handle), vec![], debug)
+                        .await;
+                    if let Some(e) = exec_result.error {
+                        if let Some(ref tx) = tx {
+                            let _ = tx
+                                .send(ChatMessage::Error(format!("Action failed: {}", e.message)))
+                                .await;
+                        }
+                        Value::RawValue(self_vm::types::raw::RawValue::Utf8(
+                            self_vm::types::raw::utf8::Utf8::new(format!("Error: {}", e.message)),
+                        ))
+                    } else if let Some(r) = exec_result.result {
+                        let res_str = r.to_string(vm);
+                        if res_str != "nothing" {
+                            if let Some(ref tx) = tx {
+                                let _ = tx.send(ChatMessage::ActionResult(res_str)).await;
+                            }
+                        }
+                        r
+                    } else {
+                        Value::RawValue(self_vm::types::raw::RawValue::Nothing)
+                    }
+                } else {
+                    Value::RawValue(self_vm::types::raw::RawValue::Nothing)
+                }
+            } else {
+                Value::RawValue(self_vm::types::raw::RawValue::Nothing)
+            }
+        } else {
+            Value::RawValue(self_vm::types::raw::RawValue::Nothing)
+        };
+
+        // Return { continue: true, resolved: result } matching what unfold() expects
+        let mut fields = HashMap::new();
+        fields.insert(
+            "continue".to_string(),
+            Value::RawValue(self_vm::types::raw::RawValue::Bool(
+                self_vm::types::raw::bool::Bool::new(true),
+            )),
+        );
+        fields.insert("resolved".to_string(), resolved);
+        let result_struct = StructLiteral::new("UnfoldResult".to_string(), fields, vm);
+        let result_handle = vm.memory.alloc(MemObject::StructLiteral(result_struct));
+        Ok(Value::Handle(result_handle))
+    })
+}
 
 use crossterm::{
     event::{self, Event, KeyCode, KeyModifiers},
@@ -345,128 +445,68 @@ impl Chat {
     async fn run_agent(vm: &mut Vm, prompt: &str, tx: mpsc::Sender<ChatMessage>) {
         let _ = tx.send(ChatMessage::Thinking).await;
 
-        let mut store = self_vm::std::ai::types::UnfoldStore::new();
-        let stdlib_defs = self_vm::std::ai::members::get_stdlib_defs();
-        let purpose = prompt.to_string();
-        let end_condition = "user objective reached".to_string();
+        *TUI_TX.lock().unwrap() = Some(tx.clone());
+        TUI_STEP.store(1, Ordering::Relaxed);
 
-        let mut step = 1;
-        loop {
-            let context = store.context_to_string_vec(vm);
+        // Allocate purpose and end_condition in VM memory
+        let purpose_str =
+            self_vm::types::object::string::SelfString::new(prompt.to_string(), vm);
+        let purpose_handle = vm.memory.alloc(MemObject::String(purpose_str));
+        let end_cond_str = self_vm::types::object::string::SelfString::new(
+            "user objective reached".to_string(),
+            vm,
+        );
+        let end_cond_handle = vm.memory.alloc(MemObject::String(end_cond_str));
 
-            let link = match self_vm::std::ai::members::generate_link(
-                &purpose,
-                &end_condition,
-                &context,
-                vm,
-                &stdlib_defs,
-                "NORMAL MODE".to_string(),
-                false,
-            )
-            .await
-            {
-                Ok(l) => l,
+        // Build chain (generates the master link)
+        let chain_val = ai_chain(
+            vm,
+            None,
+            vec![Value::Handle(purpose_handle), Value::Handle(end_cond_handle)],
+            false,
+        )
+        .await;
+
+        let chain_handle = match chain_val {
+            Ok(v) => match v.as_handle() {
+                Ok(h) => h,
                 Err(e) => {
                     let _ = tx.send(ChatMessage::Error(e.message)).await;
-                    break;
+                    *TUI_TX.lock().unwrap() = None;
+                    return;
                 }
-            };
-
-            let def = link
-                .shape
-                .property_access("def")
-                .and_then(|v| v.as_string_obj(vm).ok())
-                .unwrap_or_else(|| "Thinking...".to_string());
-
-            let is_end = link
-                .shape
-                .property_access("is_end")
-                .and_then(|v| v.as_bool(vm).ok())
-                .unwrap_or(false);
-
-            if is_end {
-                let result_desc = link
-                    .shape
-                    .property_access("result")
-                    .and_then(|v| v.as_string_obj(vm).ok())
-                    .unwrap_or_else(|| "Goal reached.".to_string());
-
-                let _ = tx.send(ChatMessage::GoalReached(result_desc)).await;
-                break;
+            },
+            Err(e) => {
+                let _ = tx.send(ChatMessage::Error(e.message)).await;
+                *TUI_TX.lock().unwrap() = None;
+                return;
             }
+        };
 
-            let _ = tx.send(ChatMessage::Step(step, def.clone())).await;
+        // Register callback and run the unfold loop
+        let callback_fn = Function::new(
+            "tui_unfold".to_string(),
+            vec!["link".to_string()],
+            Engine::NativeAsync(tui_unfold),
+        );
+        let callback_handle = vm.memory.alloc(MemObject::Function(callback_fn));
 
-            if let Some(a_val) = link.shape.property_access("action") {
-                if let Ok(mut action) = a_val.as_native_struct(vm).and_then(|ns| ns.as_action(vm)) {
-                    let mut resolved_args = vec![];
-                    for arg in action.args {
-                        if let Value::RawValue(self_vm::types::raw::RawValue::Utf8(ref argv)) = arg
-                        {
-                            let arg_str = &argv.value;
-                            if arg_str.starts_with("{variable_") && arg_str.ends_with('}') {
-                                let var_name = &arg_str[1..arg_str.len() - 1];
-                                if let Some(entry) = store.resolve(var_name) {
-                                    resolved_args.push(entry.value.clone());
-                                    continue;
-                                }
-                            }
-                        }
-                        resolved_args.push(arg);
-                    }
-                    action.args = resolved_args;
+        let result = ai_unfold(
+            vm,
+            Some(chain_handle),
+            vec![Value::Handle(callback_handle)],
+            false,
+        )
+        .await;
 
-                    let _ = tx
-                        .send(ChatMessage::Action(
-                            action.module.clone(),
-                            action.member.clone(),
-                        ))
-                        .await;
+        *TUI_TX.lock().unwrap() = None;
 
-                    let exec_func_handle = action.exec.clone();
-                    if let MemObject::Function(exec_func) = vm.memory.resolve(&exec_func_handle) {
-                        let exec_func = exec_func.clone();
-                        let action_handle =
-                            vm.memory
-                                .alloc(MemObject::NativeStruct(NativeStruct::Action(
-                                    action.clone(),
-                                )));
-                        let exec_result = vm
-                            .run_function(&exec_func, Some(action_handle), vec![], false)
-                            .await;
-
-                        if let Some(e) = exec_result.error {
-                            let _ = tx
-                                .send(ChatMessage::Error(format!("Action failed: {}", e.message)))
-                                .await;
-                            store.insert_entry(
-                                def,
-                                Value::RawValue(self_vm::types::raw::RawValue::Utf8(
-                                    self_vm::types::raw::utf8::Utf8::new(format!(
-                                        "Error: {}",
-                                        e.message
-                                    )),
-                                )),
-                            );
-                        } else if let Some(r) = exec_result.result {
-                            let res_str = r.to_string(vm);
-                            if res_str != "nothing" {
-                                let _ = tx.send(ChatMessage::ActionResult(res_str)).await;
-                            }
-                            store.insert_entry(def, r);
-                        }
-                    }
-                }
+        match result {
+            Ok(r) => {
+                let _ = tx.send(ChatMessage::GoalReached(r.to_string(vm))).await;
             }
-
-            step += 1;
-            if step > 30 {
-                let _ = tx
-                    .send(ChatMessage::Error(
-                        "Max planning depth reached.".to_string(),
-                    ))
-                    .await;
-                break;
+            Err(e) => {
+                let _ = tx.send(ChatMessage::Error(e.message)).await;
             }
         }
     }
