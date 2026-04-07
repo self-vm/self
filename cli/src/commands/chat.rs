@@ -101,7 +101,7 @@ fn tui_unfold(
                                             let preview: String =
                                                 text.chars().take(PREVIEW_CHARS).collect();
                                             let suffix = if text.chars().count() > PREVIEW_CHARS {
-                                                "…"
+                                                "..."
                                             } else {
                                                 ""
                                             };
@@ -264,9 +264,9 @@ impl Chat {
     fn print_logo() {
         // Gradient from blue to lighter blue
         let lines = [
-            ("    ██████▓▓▒▒▒▒▒░░░░    ", 102u8),
-            ("     ██████▓▒▒░░         ", 119),
-            ("      ██████▒▒░░          ", 136),
+            ("██████▓▓▒▒▒▒▒░░░░    ", 102u8),
+            ("  ██████▓▒▒░░         ", 119),
+            ("    ██████▒▒░░          ", 136),
             ("     ░▒▓█████▓▒▒░         ", 153),
             ("       ░░▒▒▓█████▓░       ", 170),
             ("         ░░▒▒▓█████▓░     ", 153),
@@ -297,8 +297,15 @@ impl Chat {
                 println!("    {} {}", "➜".dimmed(), format!("{}.{}", m, mem).dimmed());
             }
             ChatMessage::ActionResult(r) => {
-                for line in r.lines() {
+                const MAX_LINES: usize = 3;
+                let mut lines = r.lines();
+                let mut count = 0;
+                for line in lines.by_ref().take(MAX_LINES) {
                     println!("      {} {}", "│".dimmed(), line.dimmed());
+                    count += 1;
+                }
+                if count == MAX_LINES && lines.next().is_some() {
+                    println!("      {} {}", "│".dimmed(), "...".dimmed());
                 }
             }
             ChatMessage::GoalReached(r) => {

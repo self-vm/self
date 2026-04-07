@@ -145,7 +145,7 @@ Previous executed links definitions and Available context of the actual chain:
 
 The values inside <CONTEXT> are inyected through dynamic params: '{{variable_X}}'
 
-ANSWER ONLY IN JSON, ONLY ISO 8259 VALID FORMATTED JSON.
+ANSWER ONLY IN JSON, ONLY ISO 8259 VALID FORMATTED JSON. ONLY ONE JSON. ONLY 1 JSON.
 ",
         stdlib_defs.join("\n"),
         mode,
