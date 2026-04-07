@@ -1047,7 +1047,7 @@ fn enter_session_mode(vm: &mut Vm, conclusion: &Value) -> Option<(String, String
     }
 
     // if no defs defined on the struct avoid session mode
-    let instance_name = "random_generated".to_string();
+    let instance_name = "browser_instance".to_string();
     let defs = match ns.get_struct_defs(&instance_name) {
         Some(d) => d,
         None => return None,
